@@ -42,7 +42,7 @@ GCC_PREREQ += $(GCC_DIR)/mpfr
 ifeq ($(shell uname),Darwin)
 	NPROC := $(shell sysctl -n hw.logicalcpu)
 else
-	NPROC := $(shell nproc --all)
+	NPROC := $(shell nproc)
 endif
 
 TARGET := m68k-elf
