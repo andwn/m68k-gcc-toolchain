@@ -64,7 +64,7 @@ without-newlib: mk-gcc
 
 install:
 	@mkdir -p $(INSTALL_DIR)
-	@mv -rf $(PREFIX)/* $(INSTALL_DIR)
+	@cp -rf $(PREFIX)/* $(INSTALL_DIR)
 	@echo "Toolchain installed to $(INSTALL_DIR)."
 	@echo "Add $(INSTALL_DIR)/bin to your PATH before building projects."
 
