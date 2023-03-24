@@ -54,13 +54,13 @@ LANGS  ?= c
 
 COMFLAGS := --target=m68k-elf --with-cpu=m68000 --prefix=$(PREFIX) --libdir=$(PREFIX)/lib --libexecdir=$(PREFIX)/libexec
 
-.PHONY: all all-newlib install clean
+.PHONY: all without-newlib install clean
 
-all: LANGS1P = $(LANGS)
-all: mk-gcc
+all: LANGS1P = c
+all: mk-gcc2
 
-all-newlib: LANGS1P = c
-all-newlib: mk-gcc2
+without-newlib: LANGS1P = $(LANGS)
+without-newlib: mk-gcc
 
 install:
 	@mkdir -p $(INSTALL_DIR)
@@ -175,6 +175,7 @@ $(MPFR_PKG):
 
 
 clean:
+	rm -rf work
 	rm -rf $(BINUTILS_DIR)
 	rm -rf $(GCC_DIR)
 	rm -rf $(NEWLIB_DIR)
