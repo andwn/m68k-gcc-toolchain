@@ -50,7 +50,7 @@ PREFIX := $(shell pwd)/work
 PATH   := $(PREFIX)/bin:$(PATH)
 LOGDIR := $(shell pwd)
 SHASUM := shasum -a 256 -c
-LANGS  ?= c
+LANGS  ?= c,c++
 
 COMFLAGS := --target=m68k-elf --with-cpu=m68000 --prefix=$(PREFIX) --libdir=$(PREFIX)/lib --libexecdir=$(PREFIX)/libexec
 
