@@ -63,7 +63,7 @@ COMFLAGS := --target=m68k-elf --with-cpu=m68000 --prefix=$(PREFIX) --libdir=$(PR
 all: LANGS1P = c
 all: mk-gcc2
 
-without-newlib: LANGS1P = $(LANGS)
+without-newlib: LANGS1P = c
 without-newlib: mk-gcc
 
 install:
