@@ -75,47 +75,47 @@ NEWLIB_4_5_SHA     := 33f12605e0054965996c25c1382b3e463b0af91799001f5bb8c0630f2e
 # Grab the right GCC hash, and while we're at it try to determine the correct versions
 # of binutils and newlib if unspecified, to avoid compatibility issues
 ifeq ($(GCC_VER),15.1.0)
-	GCC_SHA = $(GCC_15_1_SHA)
+  GCC_SHA = $(GCC_15_1_SHA)
 else ifeq ($(GCC_VER),14.3.0)
-	GCC_SHA = $(GCC_14_3_SHA)
+  GCC_SHA = $(GCC_14_3_SHA)
 else ifeq ($(GCC_VER),14.2.0)
-	GCC_SHA = $(GCC_14_2_SHA)
+  GCC_SHA = $(GCC_14_2_SHA)
 else ifeq ($(GCC_VER),14.1.0)
-	GCC_SHA = $(GCC_14_1_SHA)
+  GCC_SHA = $(GCC_14_1_SHA)
 else ifeq ($(GCC_VER),13.4.0)
-	GCC_SHA = $(GCC_13_4_SHA)
+  GCC_SHA = $(GCC_13_4_SHA)
 else ifeq ($(GCC_VER),13.3.0)
-	GCC_SHA = $(GCC_13_3_SHA)
+  GCC_SHA = $(GCC_13_3_SHA)
 else ifeq ($(GCC_VER),13.2.0)
-	GCC_SHA = $(GCC_13_2_SHA)
+  GCC_SHA = $(GCC_13_2_SHA)
 else ifeq ($(GCC_VER),13.1.0)
-	GCC_SHA = $(GCC_13_1_SHA)
+  GCC_SHA = $(GCC_13_1_SHA)
 else ifeq ($(GCC_VER),12.4.0)
-	GCC_SHA = $(GCC_12_4_SHA)
+  GCC_SHA = $(GCC_12_4_SHA)
 else ifeq ($(GCC_VER),12.3.0)
-	GCC_SHA = $(GCC_12_3_SHA)
+  GCC_SHA = $(GCC_12_3_SHA)
 else ifeq ($(GCC_VER),12.2.0)
-	GCC_SHA = $(GCC_12_2_SHA)
+  GCC_SHA = $(GCC_12_2_SHA)
 else ifeq ($(GCC_VER),12.1.0)
-	GCC_SHA = $(GCC_12_1_SHA)
+  GCC_SHA = $(GCC_12_1_SHA)
 else ifeq ($(GCC_VER),11.5.0)
-	GCC_SHA = $(GCC_11_5_SHA)
+  GCC_SHA = $(GCC_11_5_SHA)
 else ifeq ($(GCC_VER),10.5.0)
-	GCC_SHA = $(GCC_10_5_SHA)
+  GCC_SHA = $(GCC_10_5_SHA)
 else ifeq ($(GCC_VER),9.5.0)
-	NEWLIB_VER ?= 3.2.0
-	GCC_SHA = $(GCC_9_5_SHA)
+  NEWLIB_VER ?= 3.2.0
+  GCC_SHA = $(GCC_9_5_SHA)
 else ifeq ($(GCC_VER),8.5.0)
-	NEWLIB_VER ?= 3.2.0
-	GCC_SHA = $(GCC_8_5_SHA)
+  NEWLIB_VER ?= 3.2.0
+  GCC_SHA = $(GCC_8_5_SHA)
 else ifeq ($(GCC_VER),7.5.0)
-	NEWLIB_VER ?= 3.2.0
-	GCC_SHA = $(GCC_7_5_SHA)
+  NEWLIB_VER ?= 3.2.0
+  GCC_SHA = $(GCC_7_5_SHA)
 else ifeq ($(GCC_VER),6.5.0)
-	NEWLIB_VER ?= 3.2.0
-	GCC_SHA = $(GCC_6_5_SHA)
+  NEWLIB_VER ?= 3.2.0
+  GCC_SHA = $(GCC_6_5_SHA)
 else
-$(error Unsupported GCC version)
+  $(error Unsupported GCC version)
 endif
 
 # If either of these are still unspecified, assign them now
@@ -124,71 +124,71 @@ NEWLIB_VER   ?= $(NEWLIB_DEFAULT_VER)
 
 # Get the right Binutils hash
 ifeq ($(BINUTILS_VER),2.44)
-	BINUTILS_SHA = $(BINUTILS_2_44_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_44_SHA)
 else ifeq ($(BINUTILS_VER),2.43.1)
-	BINUTILS_SHA = $(BINUTILS_2_43_1_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_43_1_SHA)
 else ifeq ($(BINUTILS_VER),2.43)
-	BINUTILS_SHA = $(BINUTILS_2_43_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_43_SHA)
 else ifeq ($(BINUTILS_VER),2.42)
-	BINUTILS_SHA = $(BINUTILS_2_42_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_42_SHA)
 else ifeq ($(BINUTILS_VER),2.41)
-	BINUTILS_SHA = $(BINUTILS_2_41_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_41_SHA)
 else ifeq ($(BINUTILS_VER),2.40)
-	BINUTILS_SHA = $(BINUTILS_2_40_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_40_SHA)
 else ifeq ($(BINUTILS_VER),2.39)
-	BINUTILS_SHA = $(BINUTILS_2_39_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_39_SHA)
 else ifeq ($(BINUTILS_VER),2.38)
-	BINUTILS_SHA = $(BINUTILS_2_38_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_38_SHA)
 else ifeq ($(BINUTILS_VER),2.37)
-	BINUTILS_SHA = $(BINUTILS_2_37_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_37_SHA)
 else ifeq ($(BINUTILS_VER),2.36.1)
-	BINUTILS_SHA = $(BINUTILS_2_36_1_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_36_1_SHA)
 else ifeq ($(BINUTILS_VER),2.36)
-	BINUTILS_SHA = $(BINUTILS_2_36_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_36_SHA)
 else ifeq ($(BINUTILS_VER),2.35.2)
-	BINUTILS_SHA = $(BINUTILS_2_35_2_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_35_2_SHA)
 else ifeq ($(BINUTILS_VER),2.35.1)
-	BINUTILS_SHA = $(BINUTILS_2_35_1_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_35_1_SHA)
 else ifeq ($(BINUTILS_VER),2.35)
-	BINUTILS_SHA = $(BINUTILS_2_35_SHA)
+  BINUTILS_SHA = $(BINUTILS_2_35_SHA)
 else
-$(error Unsupported Binutils version)
+  $(error Unsupported Binutils version)
 endif
 
 # Correct Newlib version without date
 ifeq ($(NEWLIB_VER),4.5.0)
-	NEWLIB_VER = 4.5.0.20241231
+  NEWLIB_VER = 4.5.0.20241231
 else ifeq ($(NEWLIB_VER),4.4.0)
-	NEWLIB_VER = 4.4.0.20231231
+  NEWLIB_VER = 4.4.0.20231231
 else ifeq ($(NEWLIB_VER),4.3.0)
-	NEWLIB_VER = 4.3.0.20220120
+  NEWLIB_VER = 4.3.0.20220120
 else ifeq ($(NEWLIB_VER),4.2.0)
-	NEWLIB_VER = 4.2.0.20211231
+  NEWLIB_VER = 4.2.0.20211231
 else ifeq ($(NEWLIB_VER),2.5.0)
-	NEWLIB_VER = 2.5.0.20171222
+  NEWLIB_VER = 2.5.0.20171222
 endif
 
 # Get the right Newlib hash
 ifeq ($(NEWLIB_VER),4.5.0.20241231)
-	NEWLIB_SHA = $(NEWLIB_4_5_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_5_SHA)
 else ifeq ($(NEWLIB_VER),4.4.0.20231231)
-	NEWLIB_SHA = $(NEWLIB_4_4_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_4_SHA)
 else ifeq ($(NEWLIB_VER),4.3.0.20230122)
-	NEWLIB_SHA = $(NEWLIB_4_3_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_3_SHA)
 else ifeq ($(NEWLIB_VER),4.2.0.20211231)
-	NEWLIB_SHA = $(NEWLIB_4_2_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_2_SHA)
 else ifeq ($(NEWLIB_VER),4.1.0)
-	NEWLIB_SHA = $(NEWLIB_4_1_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_1_SHA)
 else ifeq ($(NEWLIB_VER),4.0.0)
-	NEWLIB_SHA = $(NEWLIB_4_0_SHA)
+  NEWLIB_SHA = $(NEWLIB_4_0_SHA)
 else ifeq ($(NEWLIB_VER),3.2.0)
-	NEWLIB_SHA = $(NEWLIB_3_2_SHA)
+  NEWLIB_SHA = $(NEWLIB_3_2_SHA)
 else ifeq ($(NEWLIB_VER),2.5.0.20171222)
-	NEWLIB_SHA = $(NEWLIB_2_5_SHA)
+  NEWLIB_SHA = $(NEWLIB_2_5_SHA)
 else ifeq ($(NEWLIB_VER),1.20.0)
-	NEWLIB_SHA = $(NEWLIB_1_20_SHA)
+  NEWLIB_SHA = $(NEWLIB_1_20_SHA)
 else
-$(error Unsupported Newlib version)
+  $(error Unsupported Newlib version)
 endif
 
 ISL_SHA       = fcf78dd9656c10eb8cf9fbd5f59a0b6b01386205fe1934b3b287a0a1898145c0
@@ -204,11 +204,11 @@ GCC_PREREQ += $(GCC_DIR)/mpfr
 # Detect the number of processors for a parallel make
 # GNU sed forbids space after -i, BSD sed requires space after -i
 ifeq ($(shell uname),Darwin)
-	NPROC := $(shell sysctl -n hw.logicalcpu)
-	SEDI := -i '.bak'
+#  NPROC := $(shell sysctl -n hw.logicalcpu)
+  SEDI := -i '.bak'
 else
-	NPROC := $(shell nproc)
-	SEDI := -i'.bak'
+#  NPROC := $(shell nproc)
+  SEDI := -i'.bak'
 endif
 
 TARGET := m68k-elf
@@ -235,18 +235,18 @@ install:
 	@echo "Add $(INSTALL_DIR)/bin to your PATH before building projects."
 
 mk-binutils: BUILD_DIR=$(BINUTILS_DIR)/build
-mk-binutils: $(BINUTILS_DIR)
+mk-binutils: | $(BINUTILS_DIR)
 	@echo "+++ Building $(BINUTILS_DIR)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) --enable-install-libbfd \
 		--enable-shared=no --disable-werror > $(LOGDIR)/binutils.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) all -j$(NPROC) >> $(LOGDIR)/binutils.log 2>&1
+	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/binutils.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/binutils.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-binutils
 
 mk-gcc: BUILD_DIR=$(GCC_DIR)/build
-mk-gcc: $(GCC_DIR) $(GCC_PREREQ) mk-binutils
+mk-gcc: | $(GCC_DIR) $(GCC_PREREQ) mk-binutils
 	@echo "+++ Building $(GCC_DIR)..."
 	#cd $(GCC_DIR) && ./contrib/download_prerequisites > $(LOGDIR)/gcc.log 2>&1
 	@mkdir -p $(BUILD_DIR)
@@ -254,25 +254,25 @@ mk-gcc: $(GCC_DIR) $(GCC_PREREQ) mk-binutils
 		--enable-languages=$(LANGS1P) --without-headers --disable-libssp \
 		--disable-threads --disable-tls --disable-multilib --enable-shared=no \
 		--disable-werror >> $(LOGDIR)/gcc.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) all -j$(NPROC) >> $(LOGDIR)/gcc.log 2>&1
+	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-gcc
 
 mk-newlib: BUILD_DIR=$(NEWLIB_DIR)/build
-mk-newlib: $(NEWLIB_DIR) mk-gcc
+mk-newlib: | $(NEWLIB_DIR) mk-gcc
 	@echo "+++ Building $(NEWLIB_DIR)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) \
 		--disable-multilib --disable-werror > $(LOGDIR)/newlib.log 2>&1
 	sed $(SEDI) 's/^CFLAGS_FOR_TARGET =/CFLAGS_FOR_TARGET = -fpermissive/g' $(BUILD_DIR)/Makefile
-	$(MAKE) -C $(BUILD_DIR) all -j$(NPROC) >> $(LOGDIR)/newlib.log 2>&1
+	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/newlib.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install  >> $(LOGDIR)/newlib.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-newlib
 
 mk-gcc2: BUILD_DIR=$(GCC_DIR)/build
-mk-gcc2: $(GCC_DIR) mk-newlib
+mk-gcc2: | $(GCC_DIR) mk-newlib
 	@echo "+++ Building $(GCC_DIR) (Pass 2)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) \
@@ -280,7 +280,7 @@ mk-gcc2: $(GCC_DIR) mk-newlib
 		--disable-hosted-libstdxx --disable-libssp --disable-threads \
 		--disable-tls --disable-multilib --enable-shared=no --disable-werror \
 		> $(LOGDIR)/gcc2.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) all -j$(NPROC) >> $(LOGDIR)/gcc2.log 2>&1
+	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc2.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc2.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-gcc2
@@ -301,27 +301,27 @@ $(NEWLIB_PKG):
 
 # Extract source packages with tar
 
-$(BINUTILS_DIR): $(BINUTILS_PKG)
+$(BINUTILS_DIR): | $(BINUTILS_PKG)
 	tar xf $(BINUTILS_PKG)
 
-$(GCC_DIR): $(GCC_PKG)
+$(GCC_DIR): | $(GCC_PKG)
 	tar xf $(GCC_PKG)
 
-$(NEWLIB_DIR): $(NEWLIB_PKG)
+$(NEWLIB_DIR): | $(NEWLIB_PKG)
 	tar xf $(NEWLIB_PKG)
 
 # Handling of GCC prerequisites
 
-$(GCC_DIR)/isl: $(ISL_PKG) $(GCC_DIR)
+$(GCC_DIR)/isl: $(ISL_PKG) | $(GCC_DIR)
 	tar xf $< && mv $(ISL_DIR) $@
 
-$(GCC_DIR)/gmp: $(GMP_PKG) $(GCC_DIR)
+$(GCC_DIR)/gmp: $(GMP_PKG) | $(GCC_DIR)
 	tar xf $< && mv $(GMP_DIR) $@
 
-$(GCC_DIR)/mpc: $(MPC_PKG) $(GCC_DIR)
+$(GCC_DIR)/mpc: $(MPC_PKG) | $(GCC_DIR)
 	tar xf $< && mv $(MPC_DIR) $@
 
-$(GCC_DIR)/mpfr: $(MPFR_PKG) $(GCC_DIR)
+$(GCC_DIR)/mpfr: $(MPFR_PKG) | $(GCC_DIR)
 	tar xf $< && mv $(MPFR_DIR) $@
 
 $(ISL_PKG):
