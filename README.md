@@ -1,7 +1,7 @@
 ### GNU cross compiler toolchain for Motorola 68000 (m68k-elf)
 
 To build & install:
- - `make`
+ - `make -j8`
  - `sudo make install`
 
 Newlib is built by default. To disable it use `make without-newlib`.
