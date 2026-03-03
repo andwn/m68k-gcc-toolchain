@@ -1,7 +1,7 @@
 INSTALL_DIR  ?= /opt/toolchains/m68k-elf
 DL_MIRROR    ?= https://tenshi.skychase.zone/
 
-GCC_DEFAULT_VER      := 15.1.0
+GCC_DEFAULT_VER      := 15.2.0
 BINUTILS_DEFAULT_VER := 2.44
 NEWLIB_DEFAULT_VER   := 4.2.0
 
@@ -60,6 +60,7 @@ GCC_14_1_SHA       := e283c654987afe3de9d8080bc0bd79534b5ca0d681a73a11ff2b5d3767
 GCC_14_2_SHA       := a7b39bc69cbf9e25826c5a60ab26477001f7c08d85cec04bc0e29cabed6f3cc9
 GCC_14_3_SHA       := e0dc77297625631ac8e50fa92fffefe899a4eb702592da5c32ef04e2293aca3a
 GCC_15_1_SHA       := e2b09ec21660f01fecffb715e0120265216943f038d0e48a9868713e54f06cea
+GCC_15_2_SHA       := 438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e
 NEWLIB_1_20_SHA    := c644b2847244278c57bec2ddda69d8fab5a7c767f3b9af69aa7aa3da823ff692
 NEWLIB_2_5_SHA     := d2bf5d0f375381a9e6888e3074ac0e4cae72a7a748a05ef24f81b8df5328ef31
 NEWLIB_3_2_SHA     := f7b2322964a1e3b37bec0768da20f50dfb62247d729110974dd95756a53bb6d4
@@ -74,7 +75,9 @@ NEWLIB_4_5_SHA     := 33f12605e0054965996c25c1382b3e463b0af91799001f5bb8c0630f2e
 
 # Grab the right GCC hash, and while we're at it try to determine the correct versions
 # of binutils and newlib if unspecified, to avoid compatibility issues
-ifeq ($(GCC_VER),15.1.0)
+ifeq ($(GCC_VER),15.2.0)
+  GCC_SHA = $(GCC_15_2_SHA)
+else ifeq ($(GCC_VER),15.1.0)
   GCC_SHA = $(GCC_15_1_SHA)
 else ifeq ($(GCC_VER),14.3.0)
   GCC_SHA = $(GCC_14_3_SHA)
