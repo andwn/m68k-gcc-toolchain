@@ -1,0 +1,22 @@
+[constants]
+toolchain = '@DIRNAME@' / 'work'
+
+[binaries]
+c = [toolchain / 'bin' / 'm68k-elf-gcc']
+ar = [toolchain / 'bin' / 'm68k-elf-ar']
+as = [toolchain / 'bin' / 'm68k-elf-as']
+ld = [toolchain / 'bin' / 'm68k-elf-ld']
+nm = [toolchain / 'bin' / 'm68k-elf-nm']
+strip = [toolchain / 'bin' / 'm68k-elf-strip']
+
+[host_machine]
+system = 'unknown'
+cpu_family = 'm68k'
+cpu = '68000'
+endian = 'big'
+
+[properties]
+c_args = [ '-nostdlib', '-march=68000']
+c_link_args = [ '-nostdlib', '-march=68000', '-lgcc' ]
+skip_sanity_check = true
+sys_root = toolchain
