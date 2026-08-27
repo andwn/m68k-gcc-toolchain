@@ -1,0 +1,94 @@
+gas: m68k: defer the range check of a symbolic (d16,An) displacement to the linker
+
+On 68000/010 gas rejects a (d16,An) operand whose constant part does
+not fit 16 bits, even when the displacement is symbolic and the final
+value is symbol + constant, which only the linker knows. That kills
+a common hand-written assembly pattern on 68000:
+
+	move.w frame+32768(%a5),%d0	| a5 = 0xffff8000, frame in RAM
+
+The one-word encoding is the only one available, so emit it with the
+16-bit RELA fixup and defer to ld's R_68K_16 overflow check.
+The constant-only case (32768(%a5)) is still an error, and so is any
+indexed form.
+
+--- a/gas/config/tc-m68k.c	2025-02-02 09:00:00.000000000 +0900
++++ b/gas/config/tc-m68k.c	2026-08-15 18:58:38.272748431 +0900
+@@ -363,6 +363,9 @@
+       /* Whether this expression needs special pic relocation, and if
+ 	 so, which.  */
+       enum pic_relocation pic_reloc;
++      /* Whether the constant part of the expression may exceed the
++	 field the linker checks the final value instead.  */
++      char no_overflow;
+     }
+   reloc[5];			/* Five is enough???  */
+ };
+@@ -424,6 +427,7 @@
+   the_ins.reloc[the_ins.nrel].wid = width;
+   the_ins.reloc[the_ins.nrel].pcrel_fix = pc_fix;
+   the_ins.reloc[the_ins.nrel].pic_reloc = exp->pic_reloc;
++  the_ins.reloc[the_ins.nrel].no_overflow = 0;
+   the_ins.reloc[the_ins.nrel++].pcrel = pc_rel;
+ }
+ 
+@@ -2563,7 +2567,15 @@
+ 		 I think that'd break GCC, so we put up with a little
+ 		 inefficiency for the sake of working output.  */
+ 
+-	      if (!issword (nextword)
++	      /* Defer range check on 16-bit deplacements.  */
++	      int defer_range_check
++		= (!issword (nextword)
++		   && isvar (&opP->disp)
++		   && opP->disp.size != SIZE_LONG
++		   && (cpu_of_arch (current_architecture) < m68020
++		       || arch_coldfire_p (current_architecture)));
++
++	      if ((!issword (nextword) && !defer_range_check)
+ 		  || (isvar (&opP->disp)
+ 		      && ((opP->disp.size == SIZE_UNSPEC
+ 			   && flag_short_refs == 0
+@@ -2624,6 +2636,8 @@
+ 			}
+ 		      else
+ 			add_fix ('w', &opP->disp, 0, 0);
++		      if (defer_range_check)
++			the_ins.reloc[the_ins.nrel - 1].no_overflow = 1;
+ 		    }
+ 		}
+ 	      addword (nextword);
+@@ -4346,6 +4360,7 @@
+ 			      get_reloc_code (n, the_ins.reloc[m].pcrel,
+ 					      the_ins.reloc[m].pic_reloc));
+ 	  fixP->fx_pcrel_adjust = the_ins.reloc[m].pcrel_fix;
++	  fixP->fx_no_overflow = the_ins.reloc[m].no_overflow;
+ 	  if (the_ins.reloc[m].wid == 'B')
+ 	    fixP->fx_signed = 1;
+ 	}
+@@ -4408,6 +4423,7 @@
+ 			      get_reloc_code (wid, the_ins.reloc[m].pcrel,
+ 					      the_ins.reloc[m].pic_reloc));
+ 	  fixP->fx_pcrel_adjust = the_ins.reloc[m].pcrel_fix;
++	  fixP->fx_no_overflow = the_ins.reloc[m].no_overflow;
+ 	}
+       (void) frag_var (rs_machine_dependent, FRAG_VAR_SIZE, 0,
+ 		       (relax_substateT) (the_ins.fragb[n].fragty),
+@@ -4446,6 +4462,7 @@
+ 			  get_reloc_code (wid, the_ins.reloc[m].pcrel,
+ 					  the_ins.reloc[m].pic_reloc));
+       fixP->fx_pcrel_adjust = the_ins.reloc[m].pcrel_fix;
++      fixP->fx_no_overflow = the_ins.reloc[m].no_overflow;
+     }
+ }
+ 
+@@ -4874,7 +4891,8 @@
+     upper_limit = upper_limit * 2 + 1;
+ 
+   if ((addressT) val > upper_limit
+-      && (val > 0 || val < lower_limit))
++      && (val > 0 || val < lower_limit)
++      && !(fixP->fx_addsy && fixP->fx_no_overflow))
+     as_bad_where (fixP->fx_file, fixP->fx_line,
+ 		  _("value %ld out of range"), (long)val);
+ 

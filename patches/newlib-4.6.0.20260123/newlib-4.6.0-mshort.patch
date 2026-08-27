@@ -1,0 +1,119 @@
+diff --git a/newlib/libc/include/ieeefp.h b/newlib/libc/include/ieeefp.h
+index 2d6421a..a26efba 100644
+--- a/newlib/libc/include/ieeefp.h
++++ b/newlib/libc/include/ieeefp.h
+@@ -162,13 +162,22 @@ typedef union
+ #define	EXT_EXPBITS	15
+ #define EXT_FRACHBITS	32
+ #define	EXT_FRACLBITS	32
++#if __SIZEOF_INT__ < 4
++/* A 32-bit bit-field does not fit in a 16-bit int (m68k -mshort).  */
++#define __ieee_ext_field_type unsigned long
++#else
+ #define __ieee_ext_field_type unsigned int
++#endif
+ 
+ #elif LDBL_MANT_DIG == 65
+ #define	EXT_EXPBITS	15
+ #define EXT_FRACHBITS	32
+ #define	EXT_FRACLBITS	32
++#if __SIZEOF_INT__ < 4
++#define __ieee_ext_field_type unsigned long
++#else
+ #define __ieee_ext_field_type unsigned int
++#endif
+ 
+ #elif LDBL_MANT_DIG == 112
+ #define	EXT_EXPBITS	15
+diff --git a/newlib/libc/machine/m68k/memset.S b/newlib/libc/machine/m68k/memset.S
+index 622cf01..9dc31a1 100644
+--- a/newlib/libc/machine/m68k/memset.S
++++ b/newlib/libc/machine/m68k/memset.S
+@@ -42,8 +42,13 @@
+ |
+ SYM(memset):
+ 	move.l	4(sp),a0	| dest ptr
++#if __SIZEOF_INT__ == 2
++	move.w	8(sp),d0	| value (int is one word under -mshort)
++	move.l	10(sp),d1	| len (size_t is still a long)
++#else
+ 	move.l	8(sp),d0	| value
+ 	move.l	12(sp),d1	| len
++#endif
+ 	cmp.l	#16,d1
+ 	blo	.Lbset		| below, byte fills
+ 	|
+diff --git a/newlib/libc/stdlib/strtodg.c b/newlib/libc/stdlib/strtodg.c
+index 4e706ab..3b7a261 100644
+--- a/newlib/libc/stdlib/strtodg.c
++++ b/newlib/libc/stdlib/strtodg.c
+@@ -700,13 +700,13 @@ _strtodg_l (struct _reent *p, const char *s00, char **se, FPI *fpi, Long *exp,
+ 				e2 += ((word0(rv) & Exp_mask)
+ 					>> Exp_shift1) - Bias;
+ 				word0(rv) &= ~Exp_mask;
+-				word0(rv) |= Bias << Exp_shift1;
++				word0(rv) |= (__ULong)Bias << Exp_shift1;
+ 				dval(rv) *= bigtens[n_bigtens-1];
+ 				e1 -= 1 << (n_bigtens-1);
+ 				}
+ 			e2 += ((word0(rv) & Exp_mask) >> Exp_shift1) - Bias;
+ 			word0(rv) &= ~Exp_mask;
+-			word0(rv) |= Bias << Exp_shift1;
++			word0(rv) |= (__ULong)Bias << Exp_shift1;
+ 			for(j = 0; e1 > 0; j++, e1 >>= 1)
+ 				if (e1 & 1)
+ 					dval(rv) *= bigtens[j];
+@@ -722,13 +722,13 @@ _strtodg_l (struct _reent *p, const char *s00, char **se, FPI *fpi, Long *exp,
+ 				e2 += ((word0(rv) & Exp_mask)
+ 					>> Exp_shift1) - Bias;
+ 				word0(rv) &= ~Exp_mask;
+-				word0(rv) |= Bias << Exp_shift1;
++				word0(rv) |= (__ULong)Bias << Exp_shift1;
+ 				dval(rv) *= tinytens[n_bigtens-1];
+ 				e1 -= 1 << (n_bigtens-1);
+ 				}
+ 			e2 += ((word0(rv) & Exp_mask) >> Exp_shift1) - Bias;
+ 			word0(rv) &= ~Exp_mask;
+-			word0(rv) |= Bias << Exp_shift1;
++			word0(rv) |= (__ULong)Bias << Exp_shift1;
+ 			for(j = 0; e1 > 0; j++, e1 >>= 1)
+ 				if (e1 & 1)
+ 					dval(rv) *= tinytens[j];
+diff --git a/newlib/libm/common/frexpl.c b/newlib/libm/common/frexpl.c
+index 8da2823..f4a1d76 100644
+--- a/newlib/libm/common/frexpl.c
++++ b/newlib/libm/common/frexpl.c
+@@ -137,7 +137,7 @@ frexpl (long double x, int *eptr)
+   u.x = x;
+   int e = u.u32.exp;
+   *eptr = 0;
+-  if (e == (LDBL_MAX_EXP*2 - 1) || x == 0)
++  if (e == ((LDBL_MAX_EXP - 1)*2 + 1) || x == 0)
+     return x; /* inf,nan,0 */
+   if (e == 0) /* subnormal */
+     {
+diff --git a/newlib/libm/common/sqrtl.c b/newlib/libm/common/sqrtl.c
+index 9976f35..f5b83aa 100644
+--- a/newlib/libm/common/sqrtl.c
++++ b/newlib/libm/common/sqrtl.c
+@@ -129,7 +129,7 @@ sqrtl (long double x)
+   /* If x = NaN, then sqrt(x) = NaN.  */
+   /* If x = Inf, then sqrt(x) = Inf.  */
+   /* If x = -Inf, then sqrt(x) = NaN.  */
+-  if (ux.extu_ext.ext_exp == LDBL_MAX_EXP * 2 - 1)
++  if (ux.extu_ext.ext_exp == (LDBL_MAX_EXP - 1) * 2 + 1)
+     return (x * x + x);
+ 
+   /* If x = +-0, then sqrt(x) = +-0.  */
+diff --git a/newlib/libm/math/e_scalb.c b/newlib/libm/math/e_scalb.c
+index 4d8bb8b..984fdfe 100644
+--- a/newlib/libm/math/e_scalb.c
++++ b/newlib/libm/math/e_scalb.c
+@@ -18,6 +18,7 @@
+  */
+ 
+ #include "fdlibm.h"
++#include <limits.h>
+ 
+ #ifndef _DOUBLE_IS_32BITS
+ 

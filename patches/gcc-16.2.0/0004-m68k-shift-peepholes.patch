@@ -1,0 +1,222 @@
+From 16fbf9390fb96be2c1f215f4624edb436524be15 Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Wed, 26 Aug 2026 22:50:33 +0900
+Subject: m68k: Rewrite variable shifts of a single bit as moveq #0 + bset
+
+Four peephole2 patterns after *bclrdreg for M68000:
+
+1 << n (moveq #1; lsl.l n) becomes moveq #0; bset n: 8 cycles instead
+of 8+2n, same size, so it is unconditional.
+
+2^k >> n, i.e. 1 << (k-n) (move.l #2^k; lsr.l n) becomes
+moveq #k; sub.l n; moveq #0; bset; move.l: constant time instead of
+20+2n cycles but 2-4 bytes larger, so disabled on -Os
+
+HImode (mshort) versions of the above.
+
+---
+ gcc/config/m68k/m68k.md                     | 104 ++++++++++++++++++++
+ gcc/testsuite/gcc.target/m68k/moveq-bit-1.c |  13 +++
+ gcc/testsuite/gcc.target/m68k/moveq-bit-2.c |  13 +++
+ gcc/testsuite/gcc.target/m68k/moveq-bit-3.c |  13 +++
+ gcc/testsuite/gcc.target/m68k/moveq-bit-4.c |  13 +++
+ 5 files changed, 156 insertions(+)
+ create mode 100644 gcc/testsuite/gcc.target/m68k/moveq-bit-1.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/moveq-bit-2.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/moveq-bit-3.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/moveq-bit-4.c
+
+diff --git a/gcc/config/m68k/m68k.md b/gcc/config/m68k/m68k.md
+index 1aa75a2efe6..2f68609d555 100644
+--- a/gcc/config/m68k/m68k.md
++++ b/gcc/config/m68k/m68k.md
+@@ -5437,6 +5437,110 @@
+   "bclr %1,%0"
+   [(set_attr "type" "bitrw")])
+ 
++;; Convert moveq #1 + lsl.l to moveq #0 + bset for standalone 1 << n.
++;; On 68000, lsl.l Dn,Dm costs 8+2*n cycles (up to 70 for n=31).
++;; bset Dn,Dm costs 8 cycles constant.  Saves 2*n cycles.
++(define_peephole2
++  [(set (match_operand:SI 0 "register_operand")
++	(const_int 1))
++   (set (match_dup 0)
++	(ashift:SI (match_dup 0)
++		   (match_operand:SI 1 "register_operand")))]
++  "TUNE_68000_10
++   && DATA_REG_P (operands[0])
++   && DATA_REG_P (operands[1])
++   && REGNO (operands[0]) != REGNO (operands[1])"
++  [(set (match_dup 0) (const_int 0))
++   (set (match_dup 0)
++	(ior:SI (ashift:SI (const_int 1)
++			   (and:SI (match_dup 1) (const_int 31)))
++		(match_dup 0)))])
++
++;; HImode variant for -mshort: moveq #1 + lsl.w to moveq #0 + bset.
++;; bset on data registers is always 32-bit; widening to SImode is safe
++;; because moveq #0 clears all 32 bits and the set bit is in [0,15].
++(define_peephole2
++  [(set (match_operand:HI 0 "register_operand")
++	(const_int 1))
++   (set (match_dup 0)
++	(ashift:HI (match_dup 0)
++		   (match_operand:HI 1 "register_operand")))]
++  "TUNE_68000_10
++   && DATA_REG_P (operands[0])
++   && DATA_REG_P (operands[1])
++   && REGNO (operands[0]) != REGNO (operands[1])"
++  [(set (match_dup 2) (const_int 0))
++   (set (match_dup 2)
++	(ior:SI (ashift:SI (const_int 1)
++			   (and:SI (match_dup 3) (const_int 31)))
++		(match_dup 2)))]
++{
++  operands[2] = gen_rtx_REG (SImode, REGNO (operands[0]));
++  operands[3] = gen_rtx_REG (SImode, REGNO (operands[1]));
++})
++
++;; Convert move #POW2 + lsr.l to moveq + sub + moveq #0 + bset + move.
++;; Replaces expensive variable shift (8+2*n cycles) with constant-time
++;; bset (8 cycles).  Requires the shift register to be dead so we can
++;; reuse it for the bset destination.
++;;
++;; Before: move.l #POW2,d0; lsr.l d1,d0   (20+2*shift cycles)
++;; After:  moveq #log2,d0; sub.l d1,d0; moveq #0,d1;
++;;         bset d0,d1; move.l d1,d0        (28 cycles constant)
++(define_peephole2
++  [(set (match_operand:SI 0 "register_operand")
++	(match_operand:SI 1 "const_int_operand"))
++   (set (match_dup 0)
++	(lshiftrt:SI (match_dup 0)
++		     (match_operand:SI 2 "register_operand")))]
++  "TUNE_68000_10
++   && DATA_REG_P (operands[0])
++   && DATA_REG_P (operands[2])
++   && REGNO (operands[0]) != REGNO (operands[2])
++   && exact_log2 (INTVAL (operands[1]) & 0xffffffff) > 0
++   && peep2_reg_dead_p (2, operands[2])
++   && optimize_insn_for_speed_p ()"
++  [(set (match_dup 0) (match_dup 3))
++   (set (match_dup 0) (minus:SI (match_dup 0) (match_dup 2)))
++   (set (match_dup 2) (const_int 0))
++   (set (match_dup 2)
++	(ior:SI (ashift:SI (const_int 1)
++			   (and:SI (match_dup 0) (const_int 31)))
++		(match_dup 2)))
++   (set (match_dup 0) (match_dup 2))]
++{
++  operands[3] = GEN_INT (exact_log2 (INTVAL (operands[1]) & 0xffffffff));
++})
++
++;; HImode variant: move.w #POW2 + lsr.w to moveq + sub + moveq #0 + bset.
++(define_peephole2
++  [(set (match_operand:HI 0 "register_operand")
++	(match_operand:HI 1 "const_int_operand"))
++   (set (match_dup 0)
++	(lshiftrt:HI (match_dup 0)
++		     (match_operand:HI 2 "register_operand")))]
++  "TUNE_68000_10
++   && DATA_REG_P (operands[0])
++   && DATA_REG_P (operands[2])
++   && REGNO (operands[0]) != REGNO (operands[2])
++   && exact_log2 (INTVAL (operands[1]) & 0xffff) > 0
++   && peep2_reg_dead_p (2, operands[2])
++   && optimize_insn_for_speed_p ()"
++  [(set (match_dup 4) (match_dup 3))
++   (set (match_dup 4) (minus:SI (match_dup 4) (match_dup 5)))
++   (set (match_dup 5) (const_int 0))
++   (set (match_dup 5)
++	(ior:SI (ashift:SI (const_int 1)
++			   (and:SI (match_dup 4) (const_int 31)))
++		(match_dup 5)))
++   (set (match_dup 4) (match_dup 5))]
++{
++  operands[3] = GEN_INT (exact_log2 (INTVAL (operands[1]) & 0xffff));
++  operands[4] = gen_rtx_REG (SImode, REGNO (operands[0]));
++  operands[5] = gen_rtx_REG (SImode, REGNO (operands[2]));
++})
++
++
+ ;; clear bit, bit number is int
+ (define_insn "bclrmemqi"
+   [(set (zero_extract:SI (match_operand:QI 0 "memory_operand" "+m")
+diff --git a/gcc/testsuite/gcc.target/m68k/moveq-bit-1.c b/gcc/testsuite/gcc.target/m68k/moveq-bit-1.c
+new file mode 100644
+index 00000000000..1345c1533d5
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/moveq-bit-1.c
+@@ -0,0 +1,13 @@
++/* 1 << n on the 68000: moveq #0 + bset instead of moveq #1 + lsl.l.  */
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000" } */
++
++unsigned long
++bit (int n)
++{
++  int k = n & 31;
++  return 1UL << k;
++}
++
++/* { dg-final { scan-assembler "bset %d" } } */
++/* { dg-final { scan-assembler-not "lsl\\.l" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/moveq-bit-2.c b/gcc/testsuite/gcc.target/m68k/moveq-bit-2.c
+new file mode 100644
+index 00000000000..d9102e33a95
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/moveq-bit-2.c
+@@ -0,0 +1,13 @@
++/* The HImode twin under -mshort rewrites the pair as SImode.  */
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000 -mshort" } */
++
++unsigned
++bit (int n)
++{
++  int k = n & 15;
++  return 1U << k;
++}
++
++/* { dg-final { scan-assembler "bset %d" } } */
++/* { dg-final { scan-assembler-not "lsl\\.w" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/moveq-bit-3.c b/gcc/testsuite/gcc.target/m68k/moveq-bit-3.c
+new file mode 100644
+index 00000000000..8e57690fb46
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/moveq-bit-3.c
+@@ -0,0 +1,13 @@
++/* 2^k >> n is 1 << (k-n): bset when optimising for speed.  */
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000" } */
++
++unsigned long
++topbit (int n)
++{
++  int k = n & 31;
++  return 0x80000000UL >> k;
++}
++
++/* { dg-final { scan-assembler "bset %d" } } */
++/* { dg-final { scan-assembler-not "lsr\\.l" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/moveq-bit-4.c b/gcc/testsuite/gcc.target/m68k/moveq-bit-4.c
+new file mode 100644
+index 00000000000..39a2a2f869a
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/moveq-bit-4.c
+@@ -0,0 +1,13 @@
++/* ...but the larger sequence is not used at -Os.  */
++/* { dg-do compile } */
++/* { dg-options "-Os -m68000" } */
++
++unsigned long
++topbit (int n)
++{
++  int k = n & 31;
++  return 0x80000000UL >> k;
++}
++
++/* { dg-final { scan-assembler "lsr\\.l" } } */
++/* { dg-final { scan-assembler-not "bset %d" } } */
+-- 
+2.47.3
+

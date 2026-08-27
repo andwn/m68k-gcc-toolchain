@@ -2,9 +2,9 @@ INSTALL_DIR     ?= /opt/toolchains/m68k-elf
 DL_MIRROR       ?= https://tenshi.skychase.zone/
 PICOLIBC_MIRROR ?= https://github.com/picolibc/picolibc/releases/download/
 
-GCC_DEFAULT_VER      := 15.2.0
+GCC_DEFAULT_VER      := 16.2.0
 BINUTILS_DEFAULT_VER := 2.44
-NEWLIB_DEFAULT_VER   := 4.2.0
+NEWLIB_DEFAULT_VER   := 4.6.0
 
 GCC_VER      ?= $(GCC_DEFAULT_VER)
 ISL_VER      ?= 0.24
@@ -65,6 +65,9 @@ GCC_14_2_SHA       := a7b39bc69cbf9e25826c5a60ab26477001f7c08d85cec04bc0e29cabed
 GCC_14_3_SHA       := e0dc77297625631ac8e50fa92fffefe899a4eb702592da5c32ef04e2293aca3a
 GCC_15_1_SHA       := e2b09ec21660f01fecffb715e0120265216943f038d0e48a9868713e54f06cea
 GCC_15_2_SHA       := 438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e
+GCC_15_3_SHA       := fa59c1beef8995f27c4d71c1df227587189315d3e6faff1bb4306e61b0c530eb
+GCC_16_1_SHA       := 50efb4d94c3397aff3b0d61a5abd748b4dd31d9d3f2ab7be05b171d36a510f79
+GCC_16_2_SHA       := e6738e29597f733270731aa90600f37ffdc045079dfc27ec7e8192cc81085c3e
 NEWLIB_1_20_SHA    := c644b2847244278c57bec2ddda69d8fab5a7c767f3b9af69aa7aa3da823ff692
 NEWLIB_2_5_SHA     := d2bf5d0f375381a9e6888e3074ac0e4cae72a7a748a05ef24f81b8df5328ef31
 NEWLIB_3_2_SHA     := f7b2322964a1e3b37bec0768da20f50dfb62247d729110974dd95756a53bb6d4
@@ -74,41 +77,64 @@ NEWLIB_4_2_SHA     := c3a0e8b63bc3bef1aeee4ca3906b53b3b86c8d139867607369cb2915ff
 NEWLIB_4_3_SHA     := 83a62a99af59e38eb9b0c58ed092ee24d700fff43a22c03e433955113ef35150
 NEWLIB_4_4_SHA     := 0c166a39e1bf0951dfafcd68949fe0e4b6d3658081d6282f39aeefc6310f2f13
 NEWLIB_4_5_SHA     := 33f12605e0054965996c25c1382b3e463b0af91799001f5bb8c0630f2ec8c852
+NEWLIB_4_6_SHA     := 6ff27e3bf022666f43f7802255be680eeff722ac181b1725d21e2e8318604ee3
 PICOLIBC_1_8_12_SHA:= 64e8c412e1c40fa6eb1a72d2b5cdbcbfe6ceca4cbea454edbad54557ffc747fa
 # NOTE: Newlib 4.4.0.20231231 : Compilation fails (for 68k)
 # libgloss/m68k/../read.c:24:1: error: conflicting types for ‘read’; have ‘int(int,  void *, size_t)’
 
 # Grab the right GCC hash, and while we're at it try to determine the correct versions
 # of binutils and newlib if unspecified, to avoid compatibility issues
-ifeq ($(GCC_VER),15.2.0)
+ifeq ($(GCC_VER),16.2.0)
+  GCC_SHA = $(GCC_16_2_SHA)
+else ifeq ($(GCC_VER),16.1.0)
+  GCC_SHA = $(GCC_16_1_SHA)
+else ifeq ($(GCC_VER),15.3.0)
+  NEWLIB_VER ?= 4.2.0
+  GCC_SHA = $(GCC_15_3_SHA)
+else ifeq ($(GCC_VER),15.2.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_15_2_SHA)
 else ifeq ($(GCC_VER),15.1.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_15_1_SHA)
 else ifeq ($(GCC_VER),14.3.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_14_3_SHA)
 else ifeq ($(GCC_VER),14.2.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_14_2_SHA)
 else ifeq ($(GCC_VER),14.1.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_14_1_SHA)
 else ifeq ($(GCC_VER),13.4.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_13_4_SHA)
 else ifeq ($(GCC_VER),13.3.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_13_3_SHA)
 else ifeq ($(GCC_VER),13.2.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_13_2_SHA)
 else ifeq ($(GCC_VER),13.1.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_13_1_SHA)
 else ifeq ($(GCC_VER),12.4.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_12_4_SHA)
 else ifeq ($(GCC_VER),12.3.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_12_3_SHA)
 else ifeq ($(GCC_VER),12.2.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_12_2_SHA)
 else ifeq ($(GCC_VER),12.1.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_12_1_SHA)
 else ifeq ($(GCC_VER),11.5.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_11_5_SHA)
 else ifeq ($(GCC_VER),10.5.0)
+  NEWLIB_VER ?= 4.2.0
   GCC_SHA = $(GCC_10_5_SHA)
 else ifeq ($(GCC_VER),9.5.0)
   NEWLIB_VER ?= 3.2.0
@@ -164,7 +190,9 @@ else
 endif
 
 # Correct Newlib version without date
-ifeq ($(NEWLIB_VER),4.5.0)
+ifeq ($(NEWLIB_VER),4.6.0)
+  NEWLIB_VER = 4.6.0.20260123
+else ifeq ($(NEWLIB_VER),4.5.0)
   NEWLIB_VER = 4.5.0.20241231
 else ifeq ($(NEWLIB_VER),4.4.0)
   NEWLIB_VER = 4.4.0.20231231
@@ -177,7 +205,9 @@ else ifeq ($(NEWLIB_VER),2.5.0)
 endif
 
 # Get the right Newlib hash
-ifeq ($(NEWLIB_VER),4.5.0.20241231)
+ifeq ($(NEWLIB_VER),4.6.0.20260123)
+  NEWLIB_SHA = $(NEWLIB_4_6_SHA)
+else ifeq ($(NEWLIB_VER),4.5.0.20241231)
   NEWLIB_SHA = $(NEWLIB_4_5_SHA)
 else ifeq ($(NEWLIB_VER),4.4.0.20231231)
   NEWLIB_SHA = $(NEWLIB_4_4_SHA)
@@ -235,6 +265,23 @@ SHASUM := shasum -a 256 -c
 LANGS  ?= c,c++
 
 COMFLAGS := --target=m68k-elf --with-cpu=m68000 --prefix=$(PREFIX) --libdir=$(PREFIX)/lib --libexecdir=$(PREFIX)/libexec
+
+# == Patch sets ==
+
+PATCH_DIR          := patches/gcc-$(GCC_VER)
+NEWLIB_PATCH_DIR   := patches/newlib-$(NEWLIB_VER)
+BINUTILS_PATCH_DIR := patches/binutils-$(BINUTILS_VER)
+
+ifeq ($(PATCHES),1)
+  GCC_PATCHES := $(sort $(wildcard $(PATCH_DIR)/*.patch))
+  NEWLIB_PATCHES := $(sort $(wildcard $(NEWLIB_PATCH_DIR)/*.patch))
+  BINUTILS_PATCHES := $(sort $(wildcard $(BINUTILS_PATCH_DIR)/*.patch))
+else
+  GCC_PATCHES :=
+  NEWLIB_PATCHES :=
+  BINUTILS_PATCHES :=
+endif
+
 
 .PHONY: all without-newlib install clean
 
@@ -336,12 +383,24 @@ $(PICOLIBC_PKG):
 
 $(BINUTILS_DIR): | $(BINUTILS_PKG)
 	tar xf $(BINUTILS_PKG)
+	@if [ -n "$(BINUTILS_PATCHES)" ]; then echo "+++ Patching $(BINUTILS_DIR) ($(words $(BINUTILS_PATCHES)) patches)..."; fi
+	@for p in $(BINUTILS_PATCHES); do \
+		patch -d $(BINUTILS_DIR) -p1 < $$p || exit 1; \
+	done
 
 $(GCC_DIR): | $(GCC_PKG)
 	tar xf $(GCC_PKG)
+	@if [ -n "$(GCC_PATCHES)" ]; then echo "+++ Patching $(GCC_DIR) ($(words $(GCC_PATCHES)) patches)..."; fi
+	@for p in $(GCC_PATCHES); do \
+		patch -d $(GCC_DIR) -p1 < $$p || exit 1; \
+	done
 
 $(NEWLIB_DIR): | $(NEWLIB_PKG)
 	tar xf $(NEWLIB_PKG)
+	@if [ -n "$(NEWLIB_PATCHES)" ]; then echo "+++ Patching $(NEWLIB_DIR) ($(words $(NEWLIB_PATCHES)) patches)..."; fi
+	@for p in $(NEWLIB_PATCHES); do \
+		patch -d $(NEWLIB_DIR) -p1 < $$p || exit 1; \
+	done
 
 $(PICOLIBC_DIR): | $(PICOLIBC_PKG)
 	tar xf $(PICOLIBC_PKG)

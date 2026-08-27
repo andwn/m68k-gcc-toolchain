@@ -1,0 +1,53 @@
+From b0b1548919a60c5162e210af0e8f7dc114ed49fe Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Thu, 27 Aug 2026 17:00:04 +0900
+Subject: m68k: Fix the libgcc comparison mode for mshort
+
+fpgnulib.c declares __unordsf2, __unorddf2 and __unordxf2 as returning
+plain int, but the compiler reads comparison libcall results in
+TARGET_LIBGCC_CMP_RETURN_MODE, which is SImode on m68k.
+This breaks vfprintf in Newlib when using -mshort.
+Changed it to use CMPtype like fp-bit.h.
+---
+ libgcc/config/m68k/fpgnulib.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/libgcc/config/m68k/fpgnulib.c b/libgcc/config/m68k/fpgnulib.c
+index a7d4258dff0..f1ae7551860 100644
+--- a/libgcc/config/m68k/fpgnulib.c
++++ b/libgcc/config/m68k/fpgnulib.c
+@@ -104,9 +104,12 @@ union long_double_long
+     } l;
+ };
+ 
++/* A plain `int' return is too narrow when int is 16 bits (-mshort).  */
++typedef int CMPtype __attribute__ ((mode (__libgcc_cmp_return__)));
++
+ #ifndef EXTFLOAT
+ 
+-int
++CMPtype
+ __unordsf2(float a, float b)
+ {
+   union float_long fl;
+@@ -120,7 +123,7 @@ __unordsf2(float a, float b)
+   return 0;
+ }
+ 
+-int
++CMPtype
+ __unorddf2(double a, double b)
+ {
+   union double_long dl;
+@@ -413,7 +416,7 @@ long __fixdfsi (double);
+ long __fixsfsi (float);
+ int __cmpdf2 (double, double);
+ 
+-int
++CMPtype
+ __unordxf2(long double a, long double b)
+ {
+   union long_double_long ldl;
+-- 
+2.47.3
+

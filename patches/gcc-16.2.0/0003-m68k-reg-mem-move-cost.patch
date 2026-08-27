@@ -1,0 +1,64 @@
+From 8c73e3ab6ecd1c96022499c7789cda46480820ec Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Wed, 26 Aug 2026 22:43:38 +0900
+Subject: m68k: Price register moves and memory moves for the 68000
+
+Work around a quirk in the rtx cost calculation that made a reg-reg
+move seem free.
+
+MEMORY_MOVE_COST was the generic default of 4 for every class and mode.
+Not true for 68000, a word move is 6 and long 8.
+
+---
+ gcc/config/m68k/m68k.cc | 12 ++++++++++--
+ gcc/config/m68k/m68k.h  |  9 +++++++++
+ 2 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/config/m68k/m68k.cc b/gcc/config/m68k/m68k.cc
+index 359d3e40795..5868d2461da 100644
+--- a/gcc/config/m68k/m68k.cc
++++ b/gcc/config/m68k/m68k.cc
+@@ -3505,13 +3505,18 @@ const_int_cost (HOST_WIDE_INT i)
+ 
+ static bool
+ m68k_rtx_costs (rtx x, machine_mode mode, int outer_code,
+-		int opno ATTRIBUTE_UNUSED,
+-		int *total, bool speed ATTRIBUTE_UNUSED)
++		int opno, int *total, bool speed ATTRIBUTE_UNUSED)
+ {
+   int code = GET_CODE (x);
+ 
+   switch (code)
+     {
++    case REG:
++      /* Generic rtx_cost prices a register at 0, which makes a reg-reg
++	 move look free.  Add 4 cycles for this specific case.  */
++      *total = (outer_code == SET && opno == 1) ? COSTS_N_INSNS (1) : 0;
++      return true;
++
+     case CONST_INT:
+       /* Constant zero is super cheap due to clr instruction.  */
+       if (x == const0_rtx)
+diff --git a/gcc/config/m68k/m68k.h b/gcc/config/m68k/m68k.h
+index 2cfa1ea2b80..8c7b09466a0 100644
+--- a/gcc/config/m68k/m68k.h
++++ b/gcc/config/m68k/m68k.h
+@@ -479,6 +479,15 @@ extern enum reg_class regno_reg_class[];
+ #define REGISTER_MOVE_COST(MODE, CLASS1, CLASS2)	\
+   ((((CLASS1) == FP_REGS) != ((CLASS2) == FP_REGS)) ? 4 : 2)
+ 
++/* The default memory move cost (4) is barely above a register move (2),
++   so the allocator would rather spill than use a callee-saved register.
++   In the units above (move.l dn,dm = 4 cycles = 2): move.w d(sp),rn is
++   12 cycles = 6; move.l is 16 cycles = 8 on the 68000's 16-bit bus, and
++   on a 68020+ only when -mshort marks the bus as 16-bit.  */
++#define MEMORY_MOVE_COST(MODE, CLASS, IN)				\
++  ((CLASS) == FP_REGS ? 12						\
++   : (GET_MODE_SIZE (MODE) > 2 && (!TARGET_68020 || TARGET_SHORT)) ? 8 : 6)
++
+ 
+ /* Stack layout; function entry, exit and calling.  */
+ 
+-- 
+2.47.3
+

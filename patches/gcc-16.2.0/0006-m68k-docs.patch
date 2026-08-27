@@ -1,0 +1,95 @@
+From a9c7be4ac970550823d2daf5409ee993b578968c Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Wed, 26 Aug 2026 22:51:30 +0900
+Subject: m68k: Document -mfastcall and cdecl/fastcall/near attributes
+
+---
+ gcc/doc/extend.texi | 35 +++++++++++++++++++++++++++++++++++
+ gcc/doc/invoke.texi | 18 +++++++++++++++++-
+ 2 files changed, 52 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/doc/extend.texi b/gcc/doc/extend.texi
+index 88159822fa1..72fbd7bc5f2 100644
+--- a/gcc/doc/extend.texi
++++ b/gcc/doc/extend.texi
+@@ -7524,6 +7524,41 @@ that the specified function is an interrupt handler that is designed
+ to run as a thread.  The compiler omits generate prologue/epilogue
+ sequences and replaces the return instruction with a @code{sleep}
+ instruction.  This attribute is available only on fido.
++
++@cindex @code{cdecl} function attribute, m68k
++@item cdecl
++Use the standard m68k calling convention for this function.  This is
++the per-function form of @option{-mnofastcall}.
++
++@cindex @code{fastcall} function attribute, m68k
++@item fastcall
++Pass eligible arguments in registers.  This is the per-function form of
++the @option{-mfastcall} option.  @xref{M680x0 Options}.
++
++@cindex @code{near} variable attribute, m68k
++@item near
++Use this attribute on a variable with static storage to place it in the
++near-data area and address it with a one-word extension instead of a
++32-bit absolute address.  Near variables are emitted to the
++@code{.sdata} and @code{.sbss} sections, which the linker script must
++place where the short form can reach: GCC uses the
++absolute-short addressing mode @code{(xxx).w}, so the sections must lie
++in the range @code{0xffff8000}--@code{0xffffffff}.  The linker does not
++reliably diagnose a near
++variable placed out of reach: the 16-bit relocation is only rejected
++when the upper half of the value is neither all-zero nor all-one, so a
++misplaced object may be silently addressed modulo 64 KiB; the linker
++script should pin @code{.sbss} and assert that it lies within the
++window.  The attribute
++must also appear on the @code{extern} declaration seen by other
++translation units for their references to use the short form.  The
++attribute is ignored, with a warning, when compiling
++position-independent code.
++
++@smallexample
++extern short frame_counter __attribute__ ((near));
++short frame_counter __attribute__ ((near));
++@end smallexample
+ @end table
+ 
+ @node MicroBlaze Attributes
+diff --git a/gcc/doc/invoke.texi b/gcc/doc/invoke.texi
+index 81213fca96f..cd12c91de9b 100644
+--- a/gcc/doc/invoke.texi
++++ b/gcc/doc/invoke.texi
+@@ -1199,7 +1199,8 @@ Objective-C and Objective-C++ Dialects}.
+ -mhard-float  -m68881  -msoft-float  -mpcrel
+ -malign-int  -mstrict-align  -msep-data
+ -mshared-library-id=@var{n}  -mid-shared-library
+--mxgot  -mxtls  -mlong-jump-table-offsets}
++-mxgot  -mxtls  -mlong-jump-table-offsets
++-mfastcall  -mnofastcall}
+ 
+ @emph{MCore Options} (@ref{MCore Options})
+ @gccoptlist{-mhardlit  -mdiv  -mrelax-immediates
+@@ -28391,6 +28392,21 @@ Additionally, parameters passed on the stack are also aligned to a
+ 16-bit boundary even on targets whose API mandates promotion to 32-bit.
+ This option is disabled by default.
+ 
++@opindex mfastcall
++@item -mfastcall
++Use a calling convention that passes the first arguments in registers
++instead of on the stack: up to three integer arguments in @code{d0}
++through @code{d2}, up to two pointer arguments in @code{a0} and
++@code{a1}, and, when a hardware FPU is available, up to three
++floating-point arguments in @code{fp0} through @code{fp2}.  The
++convention can be selected per function with the @code{fastcall} and
++@code{cdecl} function attributes.
++
++@opindex mnofastcall
++@item -mnofastcall
++Pass all arguments on the stack (the standard calling convention).
++This is the default.
++
+ @opindex mbitfield
+ @opindex mno-bitfield
+ @opindex mnobitfield
+-- 
+2.47.3
+

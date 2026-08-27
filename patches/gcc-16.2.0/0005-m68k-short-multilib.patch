@@ -1,0 +1,49 @@
+From f6c53613a0ff579fd8b7736543e1c803d01597ae Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Wed, 26 Aug 2026 22:50:43 +0900
+Subject: m68k: Add an m68000/short multilib
+
+A -mshort program otherwise links the 32-bit-int libgcc, whose
+int-typed helper interfaces mismatch a 16-bit-int caller.  This adds
+-mshort to the m68k-elf multilib set (t-m68kbare, t-mlibs) so such
+programs get a libgcc built with the same int.
+
+---
+ gcc/config/m68k/t-m68kbare | 4 ++++
+ gcc/config/m68k/t-mlibs    | 8 ++++++++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/gcc/config/m68k/t-m68kbare b/gcc/config/m68k/t-m68kbare
+index 0cbaead7d69..3ce35ddfa82 100644
+--- a/gcc/config/m68k/t-m68kbare
++++ b/gcc/config/m68k/t-m68kbare
+@@ -2,3 +2,7 @@
+ M68K_MLIB_DIRNAMES += softfp
+ M68K_MLIB_OPTIONS += msoft-float
+ 
++# Add -mshort (16-bit int) multilibs.
++M68K_MLIB_DIRNAMES += short
++M68K_MLIB_OPTIONS += mshort
++
+diff --git a/gcc/config/m68k/t-mlibs b/gcc/config/m68k/t-mlibs
+index 08c9ed5c68f..71376f7a8df 100644
+--- a/gcc/config/m68k/t-mlibs
++++ b/gcc/config/m68k/t-mlibs
+@@ -89,6 +89,14 @@ MULTILIB_EXCEPTIONS += $(call M68K_AWK,\
+ 	 "mcpu="MLIB"/msoft-float*")
+ endif
+ 
++ifneq ($(filter mshort,$(M68K_MLIB_OPTIONS)),)
++# Restrict the -mshort multilibs to the CPUs that use a 16-bit int.
++MULTILIB_EXCEPTIONS += $(call M68K_AWK,\
++	(CPU_NAME == MLIB) $(M68K_MLIB_CPU) \
++	 && MLIB != "68000" && MLIB != "68020" && MLIB != "cpu32", \
++	 "mcpu="MLIB"/*mshort*")
++endif
++
+ # Remove the default CPU from the explicit exceptions.
+ MULTILIB_EXCEPTIONS := \
+ 	$(patsubst mcpu=$(M68K_MLIB_DEFAULT)/%,%,$(MULTILIB_EXCEPTIONS))
+-- 
+2.47.3
+

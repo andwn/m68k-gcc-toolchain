@@ -1,0 +1,476 @@
+From eae57c77b7a271abcc371265be383efe66e6130a Mon Sep 17 00:00:00 2001
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Wed, 26 Aug 2026 04:07:58 +0900
+Subject: m68k: Add the near variable attribute
+
+This patch adds `__attribute__ ((near))` which, in combination with
+a specially configured linker script, emits working absolute word
+addresses on M68000. This is common handwritten ASM trick used on
+Mega Drive, which addresses RAM at the very top of address space
+(0xFF0000 - 0xFFFFFF). Using a sign-extended word, the top 32KB are
+addressable using (xxx).w instead of (xxx).l.
+
+Near data goes in .sbss or .sdata. You must define these sections
+in your linker script, ex:
+
+    /* In MEMORY */
+    RAM (rwx) : ORIGIN = 0xFFFF0000, LENGTH = 64K
+    
+    /* Globals */
+    _stack_floor = 0xFFFFFC00;       /* 0x400 stack budget */
+    _near_base = 0xFFFF8000;         /* lowest (sym).w reachable address */
+    
+    /* In SECTIONS */
+    .sbss _near_base (NOLOAD) : {
+        _near_start = .;
+        *(.sbss .sbss.* .scommon .scommon.*)
+        _near_end = .;
+    } > RAM
+
+    /* Trailing catch-all so the ASSERT below can see initialised near data */
+    .sdata (NOLOAD) : { *(.sdata .sdata.*) } > RAM
+
+    /* (A NEAR=0 build has an empty window and .bss is free to cross it.) */
+    ASSERT(_near_end == _near_start || _bss_end <= _near_base, ".bss overlaps the near window")
+    ASSERT(_near_end <= _stack_floor, "near data overlaps the stack budget")
+    /* FIXME: Need to add a loop to the boot code to copy sdata to RAM */
+    ASSERT(SIZEOF(.sdata) == 0, "near data with an initialiser has no ROM copy")
+
+The ASSERTs are important; ld will not throw an error if near data
+bleeds outside of the new sections, happily producing invalid code.
+
+The near attribute must also be attached to externs of the variable,
+or external modules will still use the long form.
+
+Near data is not compatible with `-fpic`, the attribute will be ignred
+when using position independent code.
+
+This patch does not effect any existing code; it is inert without the
+use of `__attribute__ ((near))`.
+
+---
+ gcc/config/m68k/m68k-protos.h              |   2 +
+ gcc/config/m68k/m68k.cc                    | 157 ++++++++++++++++++++-
+ gcc/config/m68k/m68kelf.h                  |  12 ++
+ gcc/testsuite/gcc.target/m68k/near-1.c     |  62 ++++++++
+ gcc/testsuite/gcc.target/m68k/near-2.c     |  15 ++
+ gcc/testsuite/gcc.target/m68k/near-3.c     |  14 ++
+ gcc/testsuite/gcc.target/m68k/near-run-1.c |  49 +++++++
+ 7 files changed, 306 insertions(+), 5 deletions(-)
+ create mode 100644 gcc/testsuite/gcc.target/m68k/near-1.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/near-2.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/near-3.c
+ create mode 100644 gcc/testsuite/gcc.target/m68k/near-run-1.c
+
+diff --git a/gcc/config/m68k/m68k-protos.h b/gcc/config/m68k/m68k-protos.h
+index abb8e9b061d..46bd293ffc8 100644
+--- a/gcc/config/m68k/m68k-protos.h
++++ b/gcc/config/m68k/m68k-protos.h
+@@ -115,3 +115,5 @@ extern rtx m68k_legitimize_call_address (rtx);
+ extern rtx m68k_legitimize_sibcall_address (rtx);
+ extern int m68k_hard_regno_rename_ok(unsigned int, unsigned int);
+ extern poly_int64 m68k_push_rounding (poly_int64);
++extern void m68k_output_aligned_bss (FILE *, tree, const char *,
++				     unsigned HOST_WIDE_INT, int, bool);
+diff --git a/gcc/config/m68k/m68k.cc b/gcc/config/m68k/m68k.cc
+index 18fc2cacf43..9b1e562b099 100644
+--- a/gcc/config/m68k/m68k.cc
++++ b/gcc/config/m68k/m68k.cc
+@@ -170,6 +170,10 @@ static rtx m68k_struct_value_rtx (tree, int);
+ static tree m68k_handle_fndecl_attribute (tree *node, tree name,
+ 					  tree args, int flags,
+ 					  bool *no_add_attrs);
++static tree m68k_handle_near_attribute (tree *, tree, tree, int, bool *);
++static bool m68k_in_small_data_p (const_tree);
++static void m68k_encode_section_info (tree, rtx, int);
++static bool m68k_short_address_p (rtx);
+ static void m68k_compute_frame_layout (void);
+ static bool m68k_save_reg (unsigned int regno, bool interrupt_handler);
+ static bool m68k_ok_for_sibcall_p (tree, tree);
+@@ -282,6 +286,12 @@ static bool m68k_use_lra_p (void);
+ #undef TARGET_ATTRIBUTE_TABLE
+ #define TARGET_ATTRIBUTE_TABLE m68k_attribute_table
+ 
++#undef TARGET_IN_SMALL_DATA_P
++#define TARGET_IN_SMALL_DATA_P m68k_in_small_data_p
++
++#undef TARGET_ENCODE_SECTION_INFO
++#define TARGET_ENCODE_SECTION_INFO m68k_encode_section_info
++
+ #undef TARGET_PROMOTE_PROTOTYPES
+ #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
+ 
+@@ -379,7 +389,10 @@ TARGET_GNU_ATTRIBUTES (m68k_attribute_table,
+   { "interrupt_handler", 0, 0, true,  false, false, false,
+     m68k_handle_fndecl_attribute, NULL },
+   { "interrupt_thread", 0, 0, true,  false, false, false,
+-    m68k_handle_fndecl_attribute, NULL }
++    m68k_handle_fndecl_attribute, NULL },
++  /* Near-data variables are addressed with the short absolute form.  */
++  { "near",             0, 0, true,  false, false, false,
++    m68k_handle_near_attribute, NULL }
+ });
+ 
+ #undef TARGET_DOCUMENTATION_NAME
+@@ -822,6 +835,111 @@ m68k_handle_fndecl_attribute (tree *node, tree name,
+   return NULL_TREE;
+ }
+ 
++/* Handle a "near" attribute.  Only static storage is supported, and
++   the short absolute form does not exist in position-independent code.  */
++
++static tree
++m68k_handle_near_attribute (tree *node, tree name,
++			    tree args ATTRIBUTE_UNUSED,
++			    int flags ATTRIBUTE_UNUSED,
++			    bool *no_add_attrs)
++{
++  if (!VAR_P (*node))
++    {
++      warning (OPT_Wattributes, "%qE attribute only applies to variables",
++	       name);
++      *no_add_attrs = true;
++    }
++  else if (!TREE_STATIC (*node) && !DECL_EXTERNAL (*node))
++    {
++      warning (OPT_Wattributes, "%qE attribute ignored for automatic "
++	       "variable %qD", name, *node);
++      *no_add_attrs = true;
++    }
++  else if (flag_pic)
++    {
++      warning (OPT_Wattributes, "%qE attribute ignored for %qD in "
++	       "position-independent code", name, *node);
++      *no_add_attrs = true;
++    }
++
++  return NULL_TREE;
++}
++
++/* Return true if DECL is a near-data variable.  */
++
++static bool
++m68k_near_p (const_tree decl)
++{
++  return (VAR_P (decl)
++	  && lookup_attribute ("near", DECL_ATTRIBUTES (decl)) != NULL_TREE);
++}
++
++/* Implement TARGET_IN_SMALL_DATA_P: near variables go to .sdata/.sbss,
++   and default_encode_section_info marks their symbols SYMBOL_FLAG_SMALL.  */
++
++static bool
++m68k_in_small_data_p (const_tree decl)
++{
++  return m68k_near_p (decl);
++}
++
++/* Implement TARGET_ENCODE_SECTION_INFO.  Keep near variables out of
++   common storage so the linker places them in a near-data section.  */
++
++static void
++m68k_encode_section_info (tree decl, rtx rtl, int first)
++{
++  if (first && m68k_near_p (decl))
++    DECL_COMMON (decl) = 0;
++  default_encode_section_info (decl, rtl, first);
++}
++
++/* Output uninitialized variables.  Near ones get a label in .sbss;
++   everything else keeps the stock .bss / .local output.  LOCAL_P selects
++   the local fallback.  */
++
++void
++m68k_output_aligned_bss (FILE *file, tree decl, const char *name,
++			 unsigned HOST_WIDE_INT size, int align, bool local_p)
++{
++  if (local_p && !(decl && m68k_near_p (decl)))
++    {
++#ifdef ASM_OUTPUT_ALIGNED_LOCAL
++      ASM_OUTPUT_ALIGNED_LOCAL (file, name, size, align);
++#else
++      ASM_OUTPUT_LOCAL (file, name, size, size);
++#endif
++      return;
++    }
++
++  if (decl && m68k_near_p (decl))
++    switch_to_section (get_named_section (decl, ".sbss", 0));
++  else
++    switch_to_section (bss_section);
++  ASM_OUTPUT_ALIGN (file, floor_log2 (align / BITS_PER_UNIT));
++  last_assemble_variable_decl = decl;
++  ASM_DECLARE_OBJECT_NAME (file, name, decl);
++  ASM_OUTPUT_SKIP (file, size ? size : 1);
++}
++
++/* Return true if X is a 16-bit constant address or a (possibly offset)
++   near-data symbol, i.e. reachable with (xxx).w.  */
++
++static bool
++m68k_short_address_p (rtx x)
++{
++  if (CONST_INT_P (x))
++    return IN_RANGE (INTVAL (x), -0x8000, 0x7fff);
++
++  if (flag_pic)
++    return false;
++
++  rtx base, offset;
++  split_const (x, &base, &offset);
++  return SYMBOL_REF_P (base) && SYMBOL_REF_SMALL_P (base);
++}
++
+ static void
+ m68k_compute_frame_layout (void)
+ {
+@@ -2229,6 +2347,18 @@ m68k_decompose_address (machine_mode mode, rtx x,
+       return true;
+     }
+ 
++  /* Also (d16,An) with a near-data symbol as the displacement.  */
++  if (GET_CODE (x) == PLUS
++      && !TARGET_68020
++      && !CONST_INT_P (XEXP (x, 1))
++      && m68k_short_address_p (XEXP (x, 1))
++      && m68k_legitimate_base_reg_p (XEXP (x, 0), strict_p))
++    {
++      address->base = XEXP (x, 0);
++      address->offset = XEXP (x, 1);
++      return true;
++    }
++
+   /* Check for GOT loads.  These are (bd,An,Xn) addresses if
+      TARGET_68020 && flag_pic == 2, otherwise they are (d16,An)
+      addresses.  */
+@@ -3041,7 +3171,7 @@ m68k_rtx_costs (rtx x, machine_mode mode, int outer_code,
+     case CONST:
+     case LABEL_REF:
+     case SYMBOL_REF:
+-      *total = 3;
++      *total = m68k_short_address_p (x) ? 1 : 3;
+       return true;
+ 
+     case CONST_DOUBLE:
+@@ -5052,9 +5182,7 @@ print_operand (FILE *file, rtx op, int letter)
+       output_address (GET_MODE (op), XEXP (op, 0));
+       if (letter == 'd' && ! TARGET_68020
+ 	  && CONSTANT_ADDRESS_P (XEXP (op, 0))
+-	  && !(GET_CODE (XEXP (op, 0)) == CONST_INT
+-	       && INTVAL (XEXP (op, 0)) < 0x8000
+-	       && INTVAL (XEXP (op, 0)) >= -0x8000))
++	  && !m68k_short_address_p (XEXP (op, 0)))
+ 	fprintf (file, MOTOROLA ? ".l" : ":l");
+     }
+   else if (GET_CODE (op) == CONST_DOUBLE && GET_MODE (op) == SFmode)
+@@ -5281,6 +5409,20 @@ print_operand_address (FILE *file, rtx addr)
+ 	  output_addr_const (file, addr);
+ 	  asm_fprintf (file, flag_pic == 1 ? ":w,%Rpc)" : ":l,%Rpc)");
+ 	}
++      else if (m68k_short_address_p (addr))
++	{
++	  if (MOTOROLA)
++	    {
++	      putc ('(', file);
++	      output_addr_const (file, addr);
++	      fputs (").w", file);
++	    }
++	  else
++	    {
++	      output_addr_const (file, addr);
++	      fputs (":w", file);
++	    }
++	}
+       else
+ 	{
+ 	  /* (xxx).l.  We need a special case for SYMBOL_REF if the symbol
+diff --git a/gcc/config/m68k/m68kelf.h b/gcc/config/m68k/m68kelf.h
+index c9ed6e96d2c..ba7a068d2aa 100644
+--- a/gcc/config/m68k/m68kelf.h
++++ b/gcc/config/m68k/m68kelf.h
+@@ -146,6 +146,18 @@ do {								\
+ #define BSS_SECTION_ASM_OP	"\t.section\t.bss"
+ #endif
+ 
++/* Uninitialized near-data variables must go to .sbss, not the
++   assembler-allocated .bss or .lcomm, so route both the global and
++   the local case through the backend.  */
++#ifndef ASM_OUTPUT_ALIGNED_BSS
++#define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN) \
++  m68k_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN, false)
++#endif
++
++#undef ASM_OUTPUT_ALIGNED_DECL_LOCAL
++#define ASM_OUTPUT_ALIGNED_DECL_LOCAL(FILE, DECL, NAME, SIZE, ALIGN) \
++  m68k_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN, true)
++
+ #ifndef ASM_OUTPUT_ALIGNED_BSS
+ #define ASM_OUTPUT_ALIGNED_BSS(FILE, DECL, NAME, SIZE, ALIGN) \
+   asm_output_aligned_bss (FILE, DECL, NAME, SIZE, ALIGN)
+diff --git a/gcc/testsuite/gcc.target/m68k/near-1.c b/gcc/testsuite/gcc.target/m68k/near-1.c
+new file mode 100644
+index 00000000000..5d95766590b
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/near-1.c
+@@ -0,0 +1,62 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000" } */
++/* Near variables are addressed with (xxx).w and land in .sbss/.sdata.  */
++
++extern short frame __attribute__ ((near));
++short frame __attribute__ ((near));
++short table[8] __attribute__ ((near));
++int init __attribute__ ((near)) = 3;
++extern int far;
++
++short
++load (void)
++{
++  return frame;
++}
++
++void
++store (short v)
++{
++  frame = v;
++}
++
++short
++elt (void)
++{
++  return table[3];
++}
++
++int
++mixed (void)
++{
++  return far + init;
++}
++
++short *
++addr (void)
++{
++  return table;
++}
++
++void
++touch (void)
++{
++  table[0]++;
++}
++
++short
++elt_at (int i)
++{
++  return table[i];
++}
++
++/* { dg-final { scan-assembler "\\(frame\\)\\.w" } } */
++/* { dg-final { scan-assembler "\\(table\\+6\\)\\.w" } } */
++/* { dg-final { scan-assembler "\\(init\\)\\.w" } } */
++/* { dg-final { scan-assembler-not "\\(far\\)\\.w" } } */
++/* { dg-final { scan-assembler "\\.section\\s+\\.sbss" } } */
++/* { dg-final { scan-assembler "\\.section\\s+\\.sdata" } } */
++/* { dg-final { scan-assembler "addq\\.w #1,\\(table\\)\\.w" } } */
++/* { dg-final { scan-assembler "#table" } } */
++/* Indexed: the near symbol is the (d16,An) displacement.  */
++/* { dg-final { scan-assembler "table\\(%a\[0-7\]\\)" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/near-2.c b/gcc/testsuite/gcc.target/m68k/near-2.c
+new file mode 100644
+index 00000000000..befcbc40b36
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/near-2.c
+@@ -0,0 +1,15 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000" } */
++/* Diagnostics for misuse of the attribute.  */
++
++int f (void) __attribute__ ((near));	/* { dg-warning "only applies to variables" } */
++
++int
++g (void)
++{
++  int local __attribute__ ((near)) = 1;	/* { dg-warning "ignored for automatic variable" } */
++  static int keep __attribute__ ((near));
++  return local + keep++;
++}
++
++/* { dg-final { scan-assembler "\\(keep\\.\[0-9\]+\\)\\.w" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/near-3.c b/gcc/testsuite/gcc.target/m68k/near-3.c
+new file mode 100644
+index 00000000000..ab730780380
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/near-3.c
+@@ -0,0 +1,14 @@
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000 -fpic" } */
++/* (xxx).w does not exist in position-independent code: warn and ignore.  */
++
++int counter __attribute__ ((near));	/* { dg-warning "position-independent" } */
++
++int
++get (void)
++{
++  return counter;
++}
++
++/* { dg-final { scan-assembler-not "\\(counter\\)\\.w" } } */
++/* { dg-final { scan-assembler-not "\\.sbss" } } */
+diff --git a/gcc/testsuite/gcc.target/m68k/near-run-1.c b/gcc/testsuite/gcc.target/m68k/near-run-1.c
+new file mode 100644
+index 00000000000..a9ea67279f8
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/near-run-1.c
+@@ -0,0 +1,49 @@
++/* { dg-do run } */
++/* { dg-options "-m68000 -O2 -Wl,--section-start=.sbss=0xffff8000" } */
++
++extern void abort (void);
++
++short frame __attribute__ ((near));
++short table[8] __attribute__ ((near));
++int wide __attribute__ ((near));
++struct { char a; short b; } pair __attribute__ ((near));
++
++__attribute__ ((noipa)) void
++tick (void)
++{
++  frame++;
++  table[frame & 7] += frame;
++  wide -= 3;
++  pair.a = (char) frame;
++  pair.b = (short) -frame;
++}
++
++__attribute__ ((noipa)) short *
++slot (int i)
++{
++  return &table[i];
++}
++
++int
++main (void)
++{
++  int i;
++  volatile unsigned long p = (unsigned long) &frame;
++
++  if ((p & 0xffff8000ul) != 0xffff8000ul)
++    abort ();
++
++  for (i = 0; i < 20; i++)
++    tick ();
++
++  if (frame != 20 || wide != -60 || pair.a != 20 || pair.b != -20)
++    abort ();
++  /* frame values 1..20 into table[frame & 7]:
++     slot 0: 8+16=24, slot 1: 1+9+17=27, 2: 2+10+18=30, 3: 3+11+19=33,
++     4: 4+12+20=36, 5: 5+13=18, 6: 6+14=20, 7: 7+15=22.  */
++  if (table[0] != 24 || table[1] != 27 || table[4] != 36 || table[7] != 22)
++    abort ();
++  if (*slot (5) != 18 || slot (3) != table + 3)
++    abort ();
++  return 0;
++}
+-- 
+2.47.3
+

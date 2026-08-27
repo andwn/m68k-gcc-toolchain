@@ -1,4 +1,4 @@
-### GNU cross compiler toolchain for Motorola 68000 (m68k-elf)
+## GNU cross compiler toolchain for Motorola 68000 (m68k-elf)
 
 To build & install:
  - `make -j8`
@@ -6,7 +6,16 @@ To build & install:
 
 Newlib is built by default. To disable it use `make without-newlib`.
 
+Picolibc is included and can be optionally built with `make mk-picolibc`.
+
 The source packages are downloaded from a mirror and checksum'd because gnu.org was down while I made this.
+
+### Patches
+
+A small set of patches for GCC 16.2.0 are available which add fastcall and
+some optimizations. These are opt-in as they have only undergone basic testing
+(passes GCC's own test suite and builds my own projects just fine).
+Add `PATCHES=1` to the make line if you want to include them.
 
 ### Changing Install Path
 
@@ -28,7 +37,11 @@ Note that you are not prevented from combining incompatible versions, so it is r
 
 |Name     |Version |Release Date |Notes                        |
 |---------|--------|-------------|-----------------------------|
-|GCC      |15.1.0  |2025-04-25   |Current default              |
+|GCC      |16.2.0  |2026-08-07   |Current default              |
+|GCC      |16.1.0  |2025-04-25   |                             |
+|GCC      |15.3.0  |2025-04-25   |                             |
+|GCC      |15.2.0  |2025-04-25   |                             |
+|GCC      |15.1.0  |2025-04-25   |                             |
 |GCC      |14.3.0  |2025-05-23   |                             |
 |GCC      |14.2.0  |2024-08-01   |                             |
 |GCC      |14.1.0  |2024-05-07   |                             |
@@ -60,10 +73,11 @@ Note that you are not prevented from combining incompatible versions, so it is r
 |Binutils |2.35.2  |2021-01-30   |                             |
 |Binutils |2.35.1  |2020-09-19   |                             |
 |Binutils |2.35    |2020-07-24   |                             |
+|Newlib   |4.6.0   |2026-01-23   |Default for GCC >= 16        |
 |Newlib   |4.5.0   |2024-12-31   |                             |
 |Newlib   |4.4.0   |2023-12-31   |DOESN'T WORK!                |
 |Newlib   |4.3.0   |2023-01-20   |                             |
-|Newlib   |4.2.0   |2021-12-31   |Default for GCC >= 10        |
+|Newlib   |4.2.0   |2021-12-31   |Default for GCC 10 - 15      |
 |Newlib   |4.1.0   |2020-12-18   |                             |
 |Newlib   |4.0.0   |2020-11-17   |                             |
 |Newlib   |3.3.0   |2020-01-22   |Default for GCC < 10         |
@@ -72,7 +86,7 @@ Note that you are not prevented from combining incompatible versions, so it is r
 
 ### zlib license
 
-Copyright (c) 2025 andwn
+Copyright (c) 2026 andwn
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
