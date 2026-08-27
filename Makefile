@@ -1,5 +1,6 @@
-INSTALL_DIR  ?= /opt/toolchains/m68k-elf
-DL_MIRROR    ?= https://tenshi.skychase.zone/
+INSTALL_DIR     ?= /opt/toolchains/m68k-elf
+DL_MIRROR       ?= https://tenshi.skychase.zone/
+PICOLIBC_MIRROR ?= https://github.com/picolibc/picolibc/releases/download/
 
 GCC_DEFAULT_VER      := 15.2.0
 BINUTILS_DEFAULT_VER := 2.44
@@ -10,6 +11,7 @@ ISL_VER      ?= 0.24
 GMP_VER      ?= 6.2.1
 MPC_VER      ?= 1.2.1
 MPFR_VER     ?= 4.1.0
+PICOLIBC_VER ?= 1.8.12
 
 BINUTILS_DIR  = binutils-$(BINUTILS_VER)
 GCC_DIR       = gcc-$(GCC_VER)
@@ -18,6 +20,7 @@ ISL_DIR       = isl-$(ISL_VER)
 GMP_DIR       = gmp-$(GMP_VER)
 MPC_DIR       = mpc-$(MPC_VER)
 MPFR_DIR      = mpfr-$(MPFR_VER)
+PICOLIBC_DIR  = picolibc-$(PICOLIBC_VER)
 
 BINUTILS_PKG  = $(BINUTILS_DIR).tar.xz
 GCC_PKG       = $(GCC_DIR).tar.xz
@@ -26,6 +29,7 @@ ISL_PKG       = $(ISL_DIR).tar.bz2
 GMP_PKG       = $(GMP_DIR).tar.xz
 MPC_PKG       = $(MPC_DIR).tar.gz
 MPFR_PKG      = $(MPFR_DIR).tar.xz
+PICOLIBC_PKG  = $(PICOLIBC_DIR).tar.xz
 
 # SHA-256 Sums
 BINUTILS_2_35_SHA  := 1b11659fb49e20e18db460d44485f09442c8c56d5df165de9461eb09c8302f85
@@ -70,6 +74,7 @@ NEWLIB_4_2_SHA     := c3a0e8b63bc3bef1aeee4ca3906b53b3b86c8d139867607369cb2915ff
 NEWLIB_4_3_SHA     := 83a62a99af59e38eb9b0c58ed092ee24d700fff43a22c03e433955113ef35150
 NEWLIB_4_4_SHA     := 0c166a39e1bf0951dfafcd68949fe0e4b6d3658081d6282f39aeefc6310f2f13
 NEWLIB_4_5_SHA     := 33f12605e0054965996c25c1382b3e463b0af91799001f5bb8c0630f2ec8c852
+PICOLIBC_1_8_12_SHA:= 64e8c412e1c40fa6eb1a72d2b5cdbcbfe6ceca4cbea454edbad54557ffc747fa
 # NOTE: Newlib 4.4.0.20231231 : Compilation fails (for 68k)
 # libgloss/m68k/../read.c:24:1: error: conflicting types for ‘read’; have ‘int(int,  void *, size_t)’
 
@@ -194,6 +199,14 @@ else
   $(error Unsupported Newlib version)
 endif
 
+# Get the right picolibc hash
+ifeq ($(PICOLIBC_VER),1.8.12)
+  PICOLIBC_SHA = $(PICOLIBC_1_8_12_SHA)
+else
+  $(error Unsupported picolibc version)
+endif
+
+
 ISL_SHA       = fcf78dd9656c10eb8cf9fbd5f59a0b6b01386205fe1934b3b287a0a1898145c0
 GMP_SHA       = fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2
 MPC_SHA       = 17503d2c395dfcf106b622dc142683c1199431d095367c6aacba6eec30340459
@@ -288,6 +301,18 @@ mk-gcc2: | $(GCC_DIR) mk-newlib
 	@rm -rf $(BUILD_DIR)
 	@touch mk-gcc2
 
+mk-picolibc: BUILD_DIR=$(PICOLIBC_DIR)/build
+mk-picolibc: | $(PICOLIBC_DIR) mk-gcc
+	@echo "+++ Building $(PICOLIBC_DIR)..."
+	@mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && meson setup --reconfigure .. -Dmultilib=false -Dpicocrt=false \
+        -Dsemihost=false -Dspecsdir=none -Dincludedir=../work/include -Dlibdir=../work/lib \
+       --cross-file=../../cross-m68k-elf.txt --prefix=$(PREFIX) > $(LOGDIR)/picolibc.log 2>&1
+	cd $(BUILD_DIR) && ninja >> $(LOGDIR)/picolibc.log 2>&1
+	cd $(BUILD_DIR) && ninja install  >> $(LOGDIR)/picolibc.log 2>&1
+	@rm -rf $(BUILD_DIR)
+	@touch mk-picolibc
+
 # Download packages from mirror
 
 $(BINUTILS_PKG):
@@ -302,6 +327,10 @@ $(NEWLIB_PKG):
 	@wget $(DL_MIRROR)$(NEWLIB_PKG)
 	@echo "$(NEWLIB_SHA) *$(NEWLIB_PKG)" | $(SHASUM)
 
+$(PICOLIBC_PKG):
+	@wget $(PICOLIBC_MIRROR)/$(PICOLIBC_VER)/$(PICOLIBC_PKG)
+	@echo "$(PICOLIBC_SHA) *$(PICOLIBC_PKG)" | $(SHASUM)
+
 # Extract source packages with tar
 
 $(BINUTILS_DIR): | $(BINUTILS_PKG)
@@ -312,6 +341,9 @@ $(GCC_DIR): | $(GCC_PKG)
 
 $(NEWLIB_DIR): | $(NEWLIB_PKG)
 	tar xf $(NEWLIB_PKG)
+
+$(PICOLIBC_DIR): | $(PICOLIBC_PKG)
+	tar xf $(PICOLIBC_PKG)
 
 # Handling of GCC prerequisites
 
@@ -349,4 +381,4 @@ clean:
 	rm -rf $(BINUTILS_DIR)
 	rm -rf $(GCC_DIR)
 	rm -rf $(NEWLIB_DIR)
-	rm -f mk-binutils mk-gcc mk-newlib mk-gcc2
+	rm -f mk-binutils mk-gcc mk-newlib mk-gcc2 mk-picolibc
