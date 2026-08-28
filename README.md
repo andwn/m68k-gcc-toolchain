@@ -38,9 +38,9 @@ Note that you are not prevented from combining incompatible versions, so it is r
 |Name     |Version |Release Date |Notes                        |
 |---------|--------|-------------|-----------------------------|
 |GCC      |16.2.0  |2026-08-07   |Current default              |
-|GCC      |16.1.0  |2025-04-25   |                             |
-|GCC      |15.3.0  |2025-04-25   |                             |
-|GCC      |15.2.0  |2025-04-25   |                             |
+|GCC      |16.1.0  |2026-04-30   |                             |
+|GCC      |15.3.0  |2026-06-12   |                             |
+|GCC      |15.2.0  |2025-08-08   |                             |
 |GCC      |15.1.0  |2025-04-25   |                             |
 |GCC      |14.3.0  |2025-05-23   |                             |
 |GCC      |14.2.0  |2024-08-01   |                             |
