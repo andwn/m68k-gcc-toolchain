@@ -10,7 +10,7 @@ MEMORY_MOVE_COST was the generic default of 4 for every class and mode.
 Not true for 68000, a word move is 6 and long 8.
 
 ---
- gcc/config/m68k/m68k.cc | 12 ++++++++++--
+ gcc/config/m68k/m68k.cc |  9 +++++++--
  gcc/config/m68k/m68k.h  |  9 +++++++++
  2 files changed, 19 insertions(+), 2 deletions(-)
 
@@ -18,7 +18,7 @@ diff --git a/gcc/config/m68k/m68k.cc b/gcc/config/m68k/m68k.cc
 index 359d3e40795..5868d2461da 100644
 --- a/gcc/config/m68k/m68k.cc
 +++ b/gcc/config/m68k/m68k.cc
-@@ -3505,13 +3505,18 @@ const_int_cost (HOST_WIDE_INT i)
+@@ -3502,13 +3502,18 @@ const_int_cost (HOST_WIDE_INT i)
  
  static bool
  m68k_rtx_costs (rtx x, machine_mode mode, int outer_code,

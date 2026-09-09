@@ -12,10 +12,9 @@ The source packages are downloaded from a mirror and checksum'd because gnu.org 
 
 ### Patches
 
-A small set of patches for GCC 16.2.0 are available which add fastcall and
-some optimizations. These are opt-in as they have only undergone basic testing
-(passes GCC's own test suite and builds my own projects just fine).
-Add `PATCHES=1` to the make line if you want to include them.
+A small set of [patches] for GCC 16.2.0 are enabled by default which add
+fastcall and some optimizations, as well as address a codegen issue which
+may cause address errors on -O2. To disable patches, pass `PATCHES=0` to make.
 
 ### Changing Install Path
 

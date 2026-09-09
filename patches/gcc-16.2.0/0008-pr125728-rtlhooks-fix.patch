@@ -1,0 +1,65 @@
+From: Andrew DeRosier <andy@skychase.zone>
+Date: Mon, 7 Sep 2026 23:42:13 +0900
+Subject: [PATCH] rtlhooks: Don't widen a MEM in gen_lowpart_if_possible
+ [PR125728]
+
+gcc/ChangeLog:
+
+	PR rtl-optimization/125728
+	* rtlhooks.cc (gen_lowpart_if_possible): Return NULL_RTX for a
+	paradoxical lowpart of a MEM instead of widening the access.
+
+gcc/testsuite/ChangeLog:
+
+	PR rtl-optimization/125728
+	* gcc.target/m68k/pr125728.c: New test.
+---
+ gcc/rtlhooks.cc                          |  3 +++
+ gcc/testsuite/gcc.target/m68k/pr125728.c | 23 +++++++++++++++++++++++
+ 2 files changed, 26 insertions(+), 0 deletion(-)
+ create mode 100644 gcc/testsuite/gcc.target/m68k/pr125728.c
+
+diff --git a/gcc/rtlhooks.cc b/gcc/rtlhooks.cc
+index a236a6e0326..60b9feccebb 100644
+--- a/gcc/rtlhooks.cc
++++ b/gcc/rtlhooks.cc
+@@ -115,6 +115,9 @@ gen_lowpart_if_possible (machine_mode mode, rtx x)
+   else if (MEM_P (x))
+     {
+       /* This is the only other case we handle.  */
++      if (paradoxical_subreg_p (mode, GET_MODE (x)))
++	return 0;
++
+       poly_int64 offset = byte_lowpart_offset (mode, GET_MODE (x));
+       rtx new_rtx = adjust_address_nv (x, mode, offset);
+       if (! memory_address_addr_space_p (mode, XEXP (new_rtx, 0),
+diff --git a/gcc/testsuite/gcc.target/m68k/pr125728.c b/gcc/testsuite/gcc.target/m68k/pr125728.c
+new file mode 100644
+index 00000000000..6b73444d02d
+--- /dev/null
++++ b/gcc/testsuite/gcc.target/m68k/pr125728.c
+@@ -0,0 +1,23 @@
++/* PR rtl-optimization/125728 */
++/* { dg-do compile } */
++/* { dg-options "-O2 -m68000" } */
++/* { dg-final { scan-assembler-not "foo-3" } } */
++/* { dg-final { scan-assembler-not "osc\\+9" } } */
++
++extern unsigned char foo;
++extern const int table[8];
++
++int
++index_byte (void)
++{
++  return table[foo & 7];
++}
++
++extern unsigned char osc[66] __attribute__ ((aligned (2)));
++extern unsigned char lani __attribute__ ((aligned (2)));
++
++unsigned short
++sum_byte (void)
++{
++  return (unsigned short) lani * 16 + (osc[10] & 15);
++}
+

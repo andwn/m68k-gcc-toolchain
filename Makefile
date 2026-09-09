@@ -272,6 +272,9 @@ PATCH_DIR          := patches/gcc-$(GCC_VER)
 NEWLIB_PATCH_DIR   := patches/newlib-$(NEWLIB_VER)
 BINUTILS_PATCH_DIR := patches/binutils-$(BINUTILS_VER)
 
+# Since there are upstream codegen issues now, patch by default
+PATCHES ?= 1
+
 ifeq ($(PATCHES),1)
   GCC_PATCHES := $(sort $(wildcard $(PATCH_DIR)/*.patch))
   NEWLIB_PATCHES := $(sort $(wildcard $(NEWLIB_PATCH_DIR)/*.patch))

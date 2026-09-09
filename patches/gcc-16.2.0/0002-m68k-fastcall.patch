@@ -615,7 +615,7 @@ index 9b1e562b099..359d3e40795 100644
  /* Convert X to a legitimate address and return it if successful.  Otherwise
     return X.
  
-@@ -5756,6 +6105,7 @@ output_call (rtx x)
+@@ -5751,6 +6100,7 @@ output_call (rtx x)
    if (symbolic_operand (x, VOIDmode))
      return m68k_symbolic_call;
    else
@@ -623,7 +623,7 @@ index 9b1e562b099..359d3e40795 100644
      return "jsr %a0";
  }
  
-@@ -5767,9 +6117,39 @@ output_sibcall (rtx x)
+@@ -5762,9 +6112,39 @@ output_sibcall (rtx x)
    if (symbolic_operand (x, VOIDmode))
      return m68k_symbolic_jump;
    else
@@ -663,7 +663,7 @@ index 9b1e562b099..359d3e40795 100644
  static void
  m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
  		      HOST_WIDE_INT delta, HOST_WIDE_INT vcall_offset,
-@@ -5777,38 +6157,61 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
+@@ -5772,38 +6152,61 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
  {
    const char *fnname = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (thunk));
    rtx this_slot, offset, addr, mem, tmp;
@@ -737,7 +737,7 @@ index 9b1e562b099..359d3e40795 100644
        emit_move_insn (tmp, this_slot);
        emit_move_insn (tmp, gen_rtx_MEM (Pmode, tmp));
  
-@@ -5820,12 +6223,22 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
+@@ -5815,12 +6218,22 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
  	  addr = tmp;
  	}
  
@@ -764,7 +764,7 @@ index 9b1e562b099..359d3e40795 100644
      }
  
    /* Jump to the target function.  Use a sibcall if direct jumps are
-@@ -5840,12 +6253,15 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
+@@ -5835,12 +6248,15 @@ m68k_output_mi_thunk (FILE *file, tree thunk ATTRIBUTE_UNUSED,
  	  /* Use the static chain register as a temporary (call-clobbered)
  	     GOT pointer for this function.  We can use the static chain
  	     register because it isn't live on entry to the thunk.  */
@@ -781,7 +781,7 @@ index 9b1e562b099..359d3e40795 100644
    insn = emit_call_insn (gen_sibcall (mem, const0_rtx));
    SIBLING_CALL_P (insn) = 1;
  
-@@ -6036,11 +6452,22 @@ m68k_libcall_value (machine_mode mode)
+@@ -6031,11 +6447,22 @@ m68k_libcall_value (machine_mode mode)
     NOTE: Due to differences in ABIs, don't call this function directly,
     use FUNCTION_VALUE instead.  */
  rtx
@@ -807,7 +807,7 @@ index 9b1e562b099..359d3e40795 100644
    switch (mode) {
    case E_SFmode:
    case E_DFmode:
-@@ -6053,7 +6480,7 @@ m68k_function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED)
+@@ -6048,7 +6475,7 @@ m68k_function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED)
    }
  
    /* If the function returns a pointer, push that into %a0.  */
@@ -816,7 +816,7 @@ index 9b1e562b099..359d3e40795 100644
      /* For compatibility with the large body of existing code which
         does not always properly declare external functions returning
         pointer types, the m68k/SVR4 convention is to copy the value
-@@ -7252,6 +7679,62 @@ m68k_return_pops_args (tree fundecl, tree funtype, poly_int64 size)
+@@ -7247,6 +7674,62 @@ m68k_return_pops_args (tree fundecl, tree funtype, poly_int64 size)
  	  ? (HOST_WIDE_INT) size : 0);
  }
  
@@ -879,7 +879,7 @@ index 9b1e562b099..359d3e40795 100644
  /* Make sure everything's fine if we *don't* have a given processor.
     This assumes that putting a register in fixed_regs will keep the
     compiler's mitts completely off it.  We don't bother to zero it out
-@@ -7262,6 +7745,28 @@ m68k_conditional_register_usage (void)
+@@ -7257,6 +7740,28 @@ m68k_conditional_register_usage (void)
  {
    int i;
    HARD_REG_SET x;
@@ -908,7 +908,7 @@ index 9b1e562b099..359d3e40795 100644
    if (!TARGET_HARD_FLOAT)
      {
        x = reg_class_contents[FP_REGS];
-@@ -7269,8 +7774,6 @@ m68k_conditional_register_usage (void)
+@@ -7264,8 +7769,6 @@ m68k_conditional_register_usage (void)
          if (TEST_HARD_REG_BIT (x, i))
  	  fixed_regs[i] = call_used_regs[i] = 1;
      }
@@ -917,7 +917,7 @@ index 9b1e562b099..359d3e40795 100644
  }
  
  static void
-@@ -7413,4 +7916,6 @@ m68k_use_lra_p ()
+@@ -7408,4 +7911,6 @@ m68k_use_lra_p ()
    return m68k_lra_p;
  }
  
