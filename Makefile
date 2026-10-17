@@ -266,6 +266,13 @@ LANGS  ?= c,c++
 
 COMFLAGS := --target=m68k-elf --with-cpu=m68000 --prefix=$(PREFIX) --libdir=$(PREFIX)/lib --libexecdir=$(PREFIX)/libexec
 
+# macOS cannot build with the vendored zlib, use system
+ifeq ($(shell uname -s),Darwin)
+	ZLIB_OVERRIDE := --with-system-zlib
+else
+	ZLIB_OVERRIDE :=
+endif
+
 # == Patch sets ==
 
 PATCH_DIR          := patches/gcc-$(GCC_VER)
@@ -305,7 +312,8 @@ mk-binutils: | $(BINUTILS_DIR)
 	@echo "+++ Building $(BINUTILS_DIR)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) --enable-install-libbfd \
-		--enable-shared=no --disable-werror > $(LOGDIR)/binutils.log 2>&1
+		--enable-shared=no --disable-werror $(ZLIB_OVERRIDE) \
+		> $(LOGDIR)/binutils.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/binutils.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/binutils.log 2>&1
 	@rm -rf $(BUILD_DIR)
@@ -319,7 +327,7 @@ mk-gcc: | $(GCC_DIR) $(GCC_PREREQ) mk-binutils
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) \
 		--enable-languages=$(LANGS1P) --without-headers --disable-libssp \
 		--disable-threads --disable-tls --disable-multilib --enable-shared=no \
-		--disable-werror >> $(LOGDIR)/gcc.log 2>&1
+		--disable-werror $(ZLIB_OVERRIDE) >> $(LOGDIR)/gcc.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc.log 2>&1
 	@rm -rf $(BUILD_DIR)
@@ -330,7 +338,8 @@ mk-newlib: | $(NEWLIB_DIR) mk-gcc
 	@echo "+++ Building $(NEWLIB_DIR)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && ../configure $(COMFLAGS) \
-		--disable-multilib --disable-werror > $(LOGDIR)/newlib.log 2>&1
+		--disable-multilib --disable-werror $(ZLIB_OVERRIDE) \
+		> $(LOGDIR)/newlib.log 2>&1
 	sed $(SEDI) 's/^CFLAGS_FOR_TARGET =/CFLAGS_FOR_TARGET = -fpermissive/g' $(BUILD_DIR)/Makefile
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/newlib.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install  >> $(LOGDIR)/newlib.log 2>&1
@@ -345,7 +354,7 @@ mk-gcc2: | $(GCC_DIR) mk-newlib
 		--enable-languages=$(LANGS) --without-headers --with-newlib \
 		--disable-hosted-libstdxx --disable-libssp --disable-threads \
 		--disable-tls --disable-multilib --enable-shared=no --disable-werror \
-		> $(LOGDIR)/gcc2.log 2>&1
+		$(ZLIB_OVERRIDE) > $(LOGDIR)/gcc2.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc2.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc2.log 2>&1
 	@rm -rf $(BUILD_DIR)
