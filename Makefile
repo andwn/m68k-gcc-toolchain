@@ -366,10 +366,10 @@ mk-picolibc: | $(PICOLIBC_DIR) mk-gcc
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && meson setup --reconfigure .. -Dmultilib=false -Dpicocrt=false \
 		-Dsemihost=false -Dsingle-thread=true -Dincludedir=include \
-		-Dlibdir=lib --cross-file=../../cross-m68k-elf.txt --prefix=$(PREFIX) \
+		-Dlibdir=lib --cross-file=../../cross-m68k-elf.txt --prefix=$(INSTALL_DIR) \
 		> $(LOGDIR)/picolibc.log 2>&1
 	cd $(BUILD_DIR) && ninja >> $(LOGDIR)/picolibc.log 2>&1
-	cd $(BUILD_DIR) && ninja install  >> $(LOGDIR)/picolibc.log 2>&1
+	cd $(BUILD_DIR) && meson install --destdir=$(PREFIX) >> $(LOGDIR)/picolibc.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-picolibc
 
