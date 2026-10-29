@@ -303,7 +303,7 @@ without-newlib: mk-gcc
 
 install:
 	@mkdir -p $(INSTALL_DIR)
-	@cp -rf $(PREFIX)/* $(INSTALL_DIR)
+	@cp -rf $(PREFIX)/* /
 	@echo "Toolchain installed to $(INSTALL_DIR)."
 	@echo "Add $(INSTALL_DIR)/bin to your PATH before building projects."
 
@@ -315,7 +315,7 @@ mk-binutils: | $(BINUTILS_DIR)
 		--enable-shared=no --disable-werror $(ZLIB_OVERRIDE) \
 		> $(LOGDIR)/binutils.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/binutils.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/binutils.log 2>&1
+	DESTDIR=$(PREFIX) $(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/binutils.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-binutils
 
@@ -329,7 +329,7 @@ mk-gcc: | $(GCC_DIR) $(GCC_PREREQ) mk-binutils
 		--disable-threads --disable-tls --disable-multilib --enable-shared=no \
 		--disable-werror $(ZLIB_OVERRIDE) >> $(LOGDIR)/gcc.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc.log 2>&1
+	DESTDIR=$(PREFIX) $(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-gcc
 
@@ -342,7 +342,7 @@ mk-newlib: | $(NEWLIB_DIR) mk-gcc
 		> $(LOGDIR)/newlib.log 2>&1
 	sed $(SEDI) 's/^CFLAGS_FOR_TARGET =/CFLAGS_FOR_TARGET = -fpermissive/g' $(BUILD_DIR)/Makefile
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/newlib.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) install  >> $(LOGDIR)/newlib.log 2>&1
+	DESTDIR=$(PREFIX) $(MAKE) -C $(BUILD_DIR) install  >> $(LOGDIR)/newlib.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-newlib
 
@@ -356,7 +356,7 @@ mk-gcc2: | $(GCC_DIR) mk-newlib
 		--disable-tls --disable-multilib --enable-shared=no --disable-werror \
 		$(ZLIB_OVERRIDE) > $(LOGDIR)/gcc2.log 2>&1
 	$(MAKE) -C $(BUILD_DIR) all >> $(LOGDIR)/gcc2.log 2>&1
-	$(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc2.log 2>&1
+	DESTDIR=$(PREFIX) $(MAKE) -C $(BUILD_DIR) install-strip >> $(LOGDIR)/gcc2.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-gcc2
 
@@ -365,11 +365,11 @@ mk-picolibc: | $(PICOLIBC_DIR) mk-gcc
 	@echo "+++ Building $(PICOLIBC_DIR)..."
 	@mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && meson setup --reconfigure .. -Dmultilib=false -Dpicocrt=false \
-		-Dsemihost=false -Dsingle-thread=true -Dincludedir=include \
-		-Dlibdir=lib --cross-file=../../cross-m68k-elf.txt --prefix=$(PREFIX) \
+		-Dsemihost=false -Dsingle-thread=true \
+	    --cross-file=../../cross-m68k-elf.txt --prefix=$(INSTALL_DIR) \
 		> $(LOGDIR)/picolibc.log 2>&1
 	cd $(BUILD_DIR) && ninja >> $(LOGDIR)/picolibc.log 2>&1
-	cd $(BUILD_DIR) && ninja install  >> $(LOGDIR)/picolibc.log 2>&1
+	cd $(BUILD_DIR) && meson install --destdir=$(PREFIX) >> $(LOGDIR)/picolibc.log 2>&1
 	@rm -rf $(BUILD_DIR)
 	@touch mk-picolibc
 
